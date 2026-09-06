@@ -3,10 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -24,7 +23,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   User,
   CreditCard,
-  LogOut,
   Calendar,
   ChevronLeft,
   RefreshCw,
@@ -34,7 +32,7 @@ import {
 import { format } from "date-fns";
 
 export default function Profile() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { isSubscribed, isLoading: subLoading, refresh: refreshSubscription } = useSubscription();
   const router = useRouter();
   const [fullName, setFullName] = useState("");
@@ -124,10 +122,7 @@ export default function Profile() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/");
-  };
+
 
   if (!user) {
     return <p>Loading...</p>;
@@ -139,24 +134,10 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Logo variant="compact" />
-            </Link>
-            <h1 className="text-2xl font-bold text-foreground">Your Account</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Button variant="ghost" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar activePage="profile" />
+      <div className="max-w-4xl mx-auto w-full px-4 py-12">
+        <h1 className="text-2xl font-bold text-foreground mb-8">Your Account</h1>
 
         <Button variant="ghost" className="mb-4" asChild>
           <Link href="/">

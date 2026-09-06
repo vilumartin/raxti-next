@@ -3,6 +3,7 @@
 import { FileAudio, Languages, ChevronDown, ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import Footer from "@/components/Footer";
+import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,8 +34,9 @@ const HowItWorksPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
-      <div className="max-w-4xl mx-auto w-full">
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar activePage="how-it-works" />
+      <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
         {/* Back button */}
         <div className="mb-6">
           <Link href="/">

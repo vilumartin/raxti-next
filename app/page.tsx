@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import FileUpload from "@/components/FileUpload";
 import Results from "@/components/Results";
 import ProcessingStatus, { ProcessingStep } from "@/components/ProcessingStatus";
 import Footer from "@/components/Footer";
+import Navbar from "@/components/Navbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
@@ -15,12 +17,18 @@ import EmailCollectionModal from "@/components/EmailCollectionModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { FloatingElements } from "@/components/FloatingElements";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { Logo } from "@/components/Logo";
 
 const IndexPage = () => {
-  const { user } = useAuth();
-  const { isSubscribed: hasActiveSubscription } = useSubscription();
+  const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
+  const { isSubscribed: hasActiveSubscription, isLoading: subLoading } = useSubscription();
+
+  // Subscribed users go straight to their Pro Dashboard
+  useEffect(() => {
+    if (!authLoading && !subLoading && user && hasActiveSubscription) {
+      router.replace("/pro-dashboard");
+    }
+  }, [user, hasActiveSubscription, authLoading, subLoading, router]);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [steps, setSteps] = useState<ProcessingStep[]>([]);
@@ -136,38 +144,11 @@ const IndexPage = () => {
   const fileSizeMB = audioFile ? audioFile.size / (1024 * 1024) : 0;
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8 flex flex-col relative">
+    <div className="min-h-screen bg-background flex flex-col relative">
       <FloatingElements />
+      <Navbar activePage="home" />
 
-      <div className="max-w-4xl mx-auto w-full relative z-10">
-        <div className="flex justify-between items-center mb-8">
-          <Link href="/">
-            <Logo variant="compact" />
-          </Link>
-          <nav className="flex items-center space-x-4 sm:space-x-6">
-            <Link href="/how-it-works" className="text-primary hover:text-primary/80 transition-colors text-sm">
-              How It Works
-            </Link>
-            <Link href="/pro" className="text-primary hover:text-primary/80 transition-colors font-medium text-sm">
-              PRO
-            </Link>
-            {user && hasActiveSubscription && (
-              <Link href="/pro-dashboard" className="text-primary hover:text-primary/80 transition-colors font-medium text-sm">
-                Pro Dashboard
-              </Link>
-            )}
-            {user ? (
-              <Link href="/profile" className="text-primary hover:text-primary/80 transition-colors text-sm">
-                Profile
-              </Link>
-            ) : (
-              <Link href="/auth" className="text-primary hover:text-primary/80 transition-colors text-sm">
-                Sign In
-              </Link>
-            )}
-            <ThemeToggle />
-          </nav>
-        </div>
+      <div className="max-w-4xl mx-auto w-full relative z-10 px-4 sm:px-6 lg:px-8 py-12">
 
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">

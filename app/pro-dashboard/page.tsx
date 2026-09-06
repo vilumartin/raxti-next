@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, History, Video, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProSubscription } from "@/hooks/useProSubscription";
-import ProNavigation from "@/components/ProDashboard/ProNavigation";
+import Navbar from "@/components/Navbar";
 import ProHeader from "@/components/ProDashboard/ProHeader";
 import AudioProcessor from "@/components/ProDashboard/AudioProcessor";
 import YouTubeProcessor from "@/components/ProDashboard/YouTubeProcessor";
@@ -30,7 +30,6 @@ interface AudioResult {
 }
 
 const ProDashboard = () => {
-  const { signOut } = useAuth();
   const router = useRouter();
   const { user, hasActiveSubscription, isLoading, refresh } = useProSubscription();
   const [results, setResults] = useState<AudioResult | null>(null);
@@ -51,10 +50,6 @@ const ProDashboard = () => {
     hasActiveSubscription
   );
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/");
-  };
 
   const handleSelectResult = (historicalResult: any) => {
     setResults({
@@ -153,9 +148,9 @@ const ProDashboard = () => {
   console.log("✅ All checks passed - rendering ProDashboard");
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
-      <div className="max-w-4xl mx-auto w-full">
-        <ProNavigation onSignOut={handleSignOut} />
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar activePage="pro-dashboard" />
+      <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
         <ProHeader user={user} />
 
         <Tabs

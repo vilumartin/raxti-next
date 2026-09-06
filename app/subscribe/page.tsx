@@ -16,9 +16,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { User, ChevronLeft, Loader2, AlertCircle } from "lucide-react";
+import Navbar from "@/components/Navbar";
+import { ChevronLeft, Loader2, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -146,27 +145,10 @@ export default function Subscribe() {
   };
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Logo variant="compact" />
-            </Link>
-            <h1 className="text-2xl font-bold text-foreground">Subscribe to Raxti Pro</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            {user && (
-            <Button variant="outline" asChild>
-              <Link href="/profile">
-                <User className="h-4 w-4 mr-2" />
-                Your Profile
-              </Link>
-            </Button>
-          )}
-          </div>
-        </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
+      <div className="max-w-4xl mx-auto w-full px-4 py-12">
+        <h1 className="text-2xl font-bold text-foreground mb-6">Subscribe to Raxti Pro</h1>
 
         <Button variant="ghost" className="mb-4" asChild>
           <Link href="/">

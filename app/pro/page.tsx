@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Footer from "@/components/Footer";
+import Navbar from "@/components/Navbar";
 import {
   CheckIcon,
   DownloadIcon,
@@ -23,8 +24,6 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 // ── Tier definitions ──────────────────────────────────────────────────────────
 
@@ -147,18 +146,7 @@ export default function ProPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <div className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <Link href="/"><Logo variant="compact" /></Link>
-          <nav className="flex items-center space-x-4">
-            <Link href="/" className="text-muted-foreground hover:text-primary transition-colors text-sm">Home</Link>
-            <Link href="/how-it-works" className="text-muted-foreground hover:text-primary transition-colors text-sm">How It Works</Link>
-            <Link href="/pro" className="text-primary font-medium text-sm">Pricing</Link>
-            <ThemeToggle />
-          </nav>
-        </div>
-      </div>
+      <Navbar activePage="pro" />
 
       {/* Hero */}
       <div className="py-14 text-center">

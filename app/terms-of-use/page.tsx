@@ -2,31 +2,13 @@
 
 import Link from "next/link";
 import Footer from "@/components/Footer";
-import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import Navbar from "@/components/Navbar";
 
 const TermsOfUse = () => {
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
-      <div className="max-w-4xl mx-auto w-full">
-        {/* Logo and navigation */}
-        <div className="flex justify-between items-center mb-8">
-          <Link href="/">
-            <Logo variant="compact" />
-          </Link>
-          <nav className="flex items-center space-x-4">
-            <Link href="/" className="text-primary hover:text-primary/80 transition-colors text-sm">
-              Home
-            </Link>
-            <Link href="/how-it-works" className="text-primary hover:text-primary/80 transition-colors text-sm">
-              How It Works
-            </Link>
-            <Link href="/pro" className="text-primary hover:text-primary/80 transition-colors font-medium text-sm">
-              PRO
-            </Link>
-            <ThemeToggle />
-          </nav>
-        </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
+      <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
 
         <div className="bg-card rounded-lg shadow-lg p-8 mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-6">

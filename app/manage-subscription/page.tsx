@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -27,8 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { format } from "date-fns";
-import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -181,18 +181,10 @@ export default function ManageSubscription() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Logo variant="compact" />
-            </Link>
-            <h1 className="text-2xl font-bold text-foreground">Manage Subscription</h1>
-          </div>
-          <ThemeToggle />
-        </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
+      <div className="max-w-2xl mx-auto w-full px-4 py-12">
+        <h1 className="text-2xl font-bold text-foreground mb-8">Manage Subscription</h1>
 
         <Button variant="ghost" className="mb-6" asChild>
           <Link href="/profile">
