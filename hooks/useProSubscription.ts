@@ -3,25 +3,28 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/sonner";
-import { User } from "@supabase/supabase-js";
+import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 
-export const useProSubscription = (user: User | null) => {
+export const useProSubscription = () => {
   const router = useRouter();
-  const { isSubscribed: hasActiveSubscription, isLoading } = useSubscription();
+  const { user, isLoading: authLoading } = useAuth();
+  const { isSubscribed: hasActiveSubscription, isLoading: subLoading, refresh } = useSubscription();
 
   useEffect(() => {
-    if (!user && !isLoading) {
+    // Wait for both auth and subscription checks to finish before any redirect
+    if (authLoading || subLoading) return;
+
+    if (!user) {
       router.push("/auth");
       return;
     }
 
-    // Only redirect away if loading is done AND we confirmed no subscription
-    if (!isLoading && user && !hasActiveSubscription) {
+    if (!hasActiveSubscription) {
       toast.error("Pro subscription required");
       router.push("/pro");
     }
-  }, [user, isLoading, hasActiveSubscription, router]);
+  }, [user, authLoading, subLoading, hasActiveSubscription, router]);
 
-  return { hasActiveSubscription, isLoading };
+  return { user, hasActiveSubscription, isLoading: authLoading || subLoading, refresh };
 };

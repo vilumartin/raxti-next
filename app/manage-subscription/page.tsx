@@ -49,6 +49,7 @@ export default function ManageSubscription() {
   const [loading, setLoading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,15 +65,21 @@ export default function ManageSubscription() {
       setLoading(true);
       setError(null);
 
-      const { data, error: subError } = await supabase.functions.invoke("check-subscription");
-
-      if (subError) {
-        console.error("Error calling check-subscription function:", subError);
-        setError(`Failed to check subscription: ${subError.message}`);
-        throw new Error(subError.message);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError("Not authenticated");
+        return;
       }
 
-      console.log("Subscription data received:", data);
+      const res = await fetch("/api/check-subscription", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(`Failed to check subscription: ${data.error || res.statusText}`);
+        return;
+      }
 
       if (data) {
         setSubscription({
@@ -86,9 +93,7 @@ export default function ManageSubscription() {
       }
     } catch (err) {
       console.error("Error fetching subscription:", err);
-      if (!error) {
-        setError("Failed to load subscription details");
-      }
+      setError("Failed to load subscription details");
     } finally {
       setLoading(false);
     }
@@ -127,6 +132,28 @@ export default function ManageSubscription() {
       toast.error("Failed to cancel subscription");
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const openBillingPortal = async () => {
+    try {
+      setPortalLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error("Not authenticated");
+        return;
+      }
+      const res = await fetch("/api/customer-portal", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to open billing portal");
+      window.location.href = data.url;
+    } catch (err: any) {
+      toast.error(err.message || "Failed to open billing portal");
+    } finally {
+      setPortalLoading(false);
     }
   };
 
@@ -177,7 +204,7 @@ export default function ManageSubscription() {
         {loading ? (
           <Card>
             <CardContent className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 text-steno-blue animate-spin" />
+              <Loader2 className="h-8 w-8 text-primary animate-spin" />
               <span className="ml-2">Loading subscription details...</span>
             </CardContent>
           </Card>
@@ -194,7 +221,6 @@ export default function ManageSubscription() {
                   <Button
                     onClick={refreshSubscriptionStatus}
                     disabled={refreshing}
-                    className="bg-steno-blue hover:bg-steno-darkBlue"
                   >
                     {refreshing ? "Retrying..." : "Try Again"}
                   </Button>
@@ -228,7 +254,7 @@ export default function ManageSubscription() {
                     <div className="flex items-center">
                       <DollarSign className="h-4 w-4 mr-2 text-green-600" />
                       <span className="font-medium">Plan:</span>
-                      <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                      <span className="ml-2 px-2 py-1 bg-green-500/15 text-green-700 dark:text-green-400 rounded-full text-sm">
                         {subscription.subscription_tier || "Basic"}
                       </span>
                     </div>
@@ -252,9 +278,9 @@ export default function ManageSubscription() {
                 </div>
 
                 {subscription.cancel_at_period_end ? (
-                  <Alert className="border-amber-200 bg-amber-50">
-                    <AlertCircle className="h-4 w-4 text-amber-600" />
-                    <AlertDescription className="text-amber-800">
+                  <Alert className="border-amber-500/30 bg-amber-500/10">
+                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                    <AlertDescription className="text-amber-700 dark:text-amber-400">
                       Your subscription has been cancelled and will end on{" "}
                       {formatDate(subscription.current_period_end)}. You will
                       continue to have access to premium features until then.
@@ -270,19 +296,27 @@ export default function ManageSubscription() {
                   </Alert>
                 )}
 
-                <div className="flex justify-between items-center pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={refreshSubscriptionStatus}
-                    disabled={refreshing}
-                  >
-                    <RefreshCw
-                      className={`h-4 w-4 mr-2 ${
-                        refreshing ? "animate-spin" : ""
-                      }`}
-                    />
-                    Refresh Status
-                  </Button>
+                <div className="flex flex-wrap justify-between items-center gap-2 pt-4">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={refreshSubscriptionStatus}
+                      disabled={refreshing}
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+                      />
+                      Refresh Status
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={openBillingPortal}
+                      disabled={portalLoading}
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      {portalLoading ? "Opening…" : "Manage Billing"}
+                    </Button>
+                  </div>
 
                   {!subscription.cancel_at_period_end && (
                     <AlertDialog>
@@ -326,7 +360,7 @@ export default function ManageSubscription() {
         ) : (
           <Card>
             <CardContent className="text-center py-12">
-              <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">
                 No Active Subscription
               </h3>
@@ -336,7 +370,7 @@ export default function ManageSubscription() {
               <div className="space-x-4">
                 <Button
                   asChild
-                  className="bg-steno-blue hover:bg-steno-darkBlue"
+
                 >
                   <Link href="/subscribe">Subscribe Now</Link>
                 </Button>

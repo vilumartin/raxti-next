@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { CloudUpload, ArrowRight, X, RefreshCcw } from 'lucide-react';
+import { CloudUpload, ArrowRight, X, RefreshCcw, AlertCircle } from 'lucide-react';
 import AudioPreview from './AudioPreview';
 import LanguageSelector from './LanguageSelector';
 
@@ -30,7 +30,16 @@ const FileUpload = ({
 }: FileUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [formatError, setFormatError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clear the progress interval on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
   
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -88,19 +97,23 @@ const FileUpload = ({
     const isExtensionValid = fileExtension && validExtensions.includes(fileExtension);
     
     if (!isMimeTypeValid && !isExtensionValid) {
-      alert("Please select a supported audio file format: mp3, mp4, mpeg, mpga, m4a, wav, or webm");
+      setFormatError("Unsupported format. Please select an mp3, mp4, m4a, wav, or webm file.");
       return false;
     }
+    setFormatError(null);
     return true;
   };
   
   const simulateUpload = (selectedFile: File) => {
+    // Cancel any previous in-flight progress bar
+    if (intervalRef.current) clearInterval(intervalRef.current);
     setUploadProgress(0);
-    const interval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       setUploadProgress(prev => {
         const newProgress = prev + 5;
         if (newProgress >= 100) {
-          clearInterval(interval);
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
           onFileSelected(selectedFile);
           return 100;
         }
@@ -110,7 +123,9 @@ const FileUpload = ({
   };
 
   const handleChangeFile = () => {
-    // Reset to initial view by clearing the file
+    // Cancel any in-flight progress bar before clearing the file
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    setFormatError(null);
     onFileSelected(null as any);
     setUploadProgress(0);
     if (fileInputRef.current) {
@@ -174,6 +189,16 @@ const FileUpload = ({
         </div>
       )}
       
+      {formatError && (
+        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-4 py-3">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{formatError}</span>
+          <button onClick={() => setFormatError(null)} className="ml-auto text-destructive/60 hover:text-destructive">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {uploadProgress > 0 && uploadProgress < 100 && !file && (
         <div className="space-y-2">
           <div className="flex justify-between text-xs">

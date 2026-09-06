@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -13,8 +13,8 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Logo } from "@/components/Logo";
-import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,89 +26,96 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+const MAX_ATTEMPTS = 6;
+const RETRY_DELAY_MS = 3000;
+
 export default function PaymentSuccess() {
-  const [loading, setLoading] = useState(true);
-  const [verifying, setVerifying] = useState(true);
-  const [subscriptionFound, setSubscriptionFound] = useState(false);
-  const [checkAttempts, setCheckAttempts] = useState(0);
-  const [showDialog, setShowDialog] = useState(false);
-  const [manualRefreshing, setManualRefreshing] = useState(false);
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const { refresh: refreshSubscription } = useSubscription();
   const router = useRouter();
 
-  const checkSubscription = async () => {
-    try {
-      if (!user) return;
+  const [verifying, setVerifying] = useState(true);
+  const [subscriptionFound, setSubscriptionFound] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
 
-      setVerifying(true);
-      console.log(`Verifying subscription: Attempt ${checkAttempts + 1}`);
-
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Error checking subscription:", error);
-        toast.error("Error checking subscription status");
-        return;
-      }
-
-      // If subscription is found, proceed
-      if (data) {
-        console.log("Subscription found:", data);
-        setSubscriptionFound(true);
-        setVerifying(false);
-      } else {
-        // If we've tried less than 5 times and no subscription is found, try again after a delay
-        if (checkAttempts < 5) {
-          console.log("No subscription found, will retry...");
-          setCheckAttempts((prev) => prev + 1);
-          setTimeout(() => checkSubscription(), 3000); // Try again in 3 seconds
-        } else {
-          console.log("No subscription found after multiple attempts");
-          setVerifying(false);
-          setShowDialog(true);
-        }
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      setVerifying(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const manualRefresh = async () => {
-    try {
-      setManualRefreshing(true);
-      setCheckAttempts(0); // Reset attempts
-      await checkSubscription();
-    } finally {
-      setManualRefreshing(false);
-    }
-  };
+  // Use refs so the retry closure always sees current values
+  const attemptRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    // Check if user is authenticated
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const checkSubscription = useCallback(async () => {
+    if (!mountedRef.current) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const res = await fetch("/api/check-subscription", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (!mountedRef.current) return;
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.subscribed) {
+          setSubscriptionFound(true);
+          setVerifying(false);
+          // Sync the global subscription context so pro-dashboard works immediately
+          await refreshSubscription();
+          return;
+        }
+      }
+
+      // Not found yet — retry if under limit
+      attemptRef.current += 1;
+      if (attemptRef.current < MAX_ATTEMPTS) {
+        timerRef.current = setTimeout(checkSubscription, RETRY_DELAY_MS);
+      } else {
+        setVerifying(false);
+        setShowDialog(true);
+      }
+    } catch (err) {
+      console.error("Subscription check error:", err);
+      if (mountedRef.current) setVerifying(false);
+    }
+  }, [refreshSubscription]);
+
+  // Kick off verification once auth has settled
+  useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push("/auth");
       return;
     }
-
-    // Verify subscription status
     checkSubscription();
-  }, [user]);
+  }, [user, authLoading, checkSubscription, router]);
 
-  if (loading && verifying && checkAttempts <= 5) {
+  const manualRefresh = async () => {
+    setManualRefreshing(true);
+    attemptRef.current = 0;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    await checkSubscription();
+    setManualRefreshing(false);
+  };
+
+  // Loading state while auth or initial check is running
+  if (authLoading || (verifying && !subscriptionFound)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <Loader2 className="h-10 w-10 text-steno-blue animate-spin mb-4" />
-        <p>Verifying your subscription...</p>
-        <p className="text-sm text-gray-500 mt-2">This may take a moment</p>
-        <p className="text-xs text-gray-400 mt-1">
-          Attempt {checkAttempts + 1}/6
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3">
+        <Loader2 className="h-10 w-10 text-primary animate-spin" />
+        <p className="text-foreground font-medium">Confirming your subscription…</p>
+        <p className="text-sm text-muted-foreground">
+          Attempt {attemptRef.current + 1} of {MAX_ATTEMPTS}
         </p>
       </div>
     );
@@ -124,30 +131,29 @@ export default function PaymentSuccess() {
         <Card className="border-0 shadow-lg">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <CheckCircle2 className="h-12 w-12 text-green-500" />
+              <CheckCircle2 className={`h-12 w-12 ${subscriptionFound ? "text-green-500" : "text-amber-400"}`} />
             </div>
-            <CardTitle className="text-2xl">Payment Successful!</CardTitle>
+            <CardTitle className="text-2xl">
+              {subscriptionFound ? "You're all set!" : "Payment received"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-6">
             {subscriptionFound ? (
-              <p className="text-gray-600">
-                Thank you for subscribing to Raxti Pro. Your account has been
-                successfully upgraded.
+              <p className="text-muted-foreground">
+                Thank you for subscribing to Raxti Pro. Your account is active.
               </p>
             ) : (
               <div className="space-y-3">
-                <p className="text-gray-600">
-                  Your payment was successful! However, your subscription may
-                  take a few moments to activate.
+                <p className="text-muted-foreground">
+                  Your payment went through. Subscription activation can take a
+                  moment — hit refresh below if it hasn&apos;t appeared yet.
                 </p>
-                <div className="bg-amber-50 border border-amber-100 rounded-md p-4 text-left">
-                  <p className="font-medium text-amber-700 text-sm">
-                    Please note: Your subscription details will be updated
-                    shortly. If your subscription doesn&apos;t appear, please
-                    try refreshing below.
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-4 text-left">
+                  <p className="font-medium text-amber-600 dark:text-amber-400 text-sm">
+                    If your subscription still doesn&apos;t appear after a
+                    minute, contact support from your profile page.
                   </p>
                 </div>
-
                 <Button
                   variant="outline"
                   onClick={manualRefresh}
@@ -157,7 +163,7 @@ export default function PaymentSuccess() {
                   {manualRefreshing ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Refreshing...
+                      Refreshing…
                     </>
                   ) : (
                     <>
@@ -171,14 +177,10 @@ export default function PaymentSuccess() {
 
             <div className="space-y-3">
               {subscriptionFound && (
-                <Button
-                  asChild
-                  className="w-full bg-steno-blue hover:bg-steno-darkBlue"
-                >
+                <Button asChild className="w-full">
                   <Link href="/pro-dashboard">Go to Pro Dashboard</Link>
                 </Button>
               )}
-
               <Button variant="outline" asChild className="w-full">
                 <Link href="/profile">Manage Your Account</Link>
               </Button>
@@ -187,15 +189,14 @@ export default function PaymentSuccess() {
         </Card>
       </div>
 
-      {/* Help Dialog */}
       <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Subscription Status Pending</AlertDialogTitle>
+            <AlertDialogTitle>Subscription Pending</AlertDialogTitle>
             <AlertDialogDescription>
-              Your payment was successful, but we&apos;re having trouble
-              detecting your active subscription. This can happen due to delays
-              in processing. Please check your profile page in a few minutes.
+              Your payment was successful, but subscription activation is taking
+              longer than expected. Please check your profile in a few minutes.
+              If the issue persists, contact support.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

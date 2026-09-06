@@ -18,8 +18,9 @@ function ConfirmHandler() {
       // OTP / magic-link flow: ?token_hash=xxx&type=xxx
       const tokenHash = searchParams.get("token_hash");
       const type = searchParams.get("type") as any;
-      // Where to redirect after success
-      const next = searchParams.get("next") || "/";
+      // Sanitise the redirect target — only allow relative paths to prevent open redirect
+      const rawNext = searchParams.get("next") || "/";
+      const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
 
       try {
         if (code) {
@@ -29,7 +30,8 @@ function ConfirmHandler() {
           const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
           if (error) throw error;
         } else {
-          // Implicit / hash flow — session already set by supabase-js; just redirect
+          // No confirmation token — treat as an error rather than silently succeeding
+          throw new Error("No confirmation token found. The link may be invalid or expired.");
         }
 
         setStatus("success");

@@ -36,9 +36,13 @@ const Results = ({ results, onReset, userId, inputLanguage, outputLanguage, hasA
   const [activeTab, setActiveTab] = useState('transcript');
   const [customResults, setCustomResults] = useState<{ summary: string; actionItems: string[] } | null>(null);
 
-  const handleCopy = (text: string, type: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`${type} copied to clipboard`);
+  const handleCopy = async (text: string, type: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${type} copied to clipboard`);
+    } catch {
+      toast.error(`Failed to copy ${type} — please copy manually`);
+    }
   };
 
   const handleCustomResults = (newResults: { summary: string; actionItems: string[] }) => {

@@ -15,7 +15,6 @@ import AudioProcessor from "@/components/ProDashboard/AudioProcessor";
 import YouTubeProcessor from "@/components/ProDashboard/YouTubeProcessor";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 interface AudioResult {
   id?: string;
@@ -31,9 +30,9 @@ interface AudioResult {
 }
 
 const ProDashboard = () => {
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
   const router = useRouter();
-  const { hasActiveSubscription, isLoading } = useProSubscription(user);
+  const { user, hasActiveSubscription, isLoading, refresh } = useProSubscription();
   const [results, setResults] = useState<AudioResult | null>(null);
   const [youtubeResults, setYoutubeResults] = useState<AudioResult | null>(
     null
@@ -70,12 +69,8 @@ const ProDashboard = () => {
   const handleRefreshSubscription = async () => {
     setIsRefreshing(true);
     try {
-      const { error } = await supabase.functions.invoke("check-subscription");
-      if (error) {
-        toast.error("Failed to refresh subscription status");
-      } else {
-        toast.success("Subscription status refreshed");
-      }
+      await refresh();
+      toast.success("Subscription status refreshed");
     } catch (err) {
       toast.error("Failed to refresh subscription status");
     } finally {

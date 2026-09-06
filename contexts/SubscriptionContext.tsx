@@ -44,12 +44,19 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("check-subscription");
-      if (!error && data) {
-        setIsSubscribed(data.subscribed || false);
-        lastChecked.current = now;
-        lastUserId.current = user.id;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setIsSubscribed(false);
+        return;
       }
+      const res = await fetch("/api/check-subscription", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setIsSubscribed(data.subscribed || false);
+      lastChecked.current = now;
+      lastUserId.current = user.id;
     } catch (err) {
       console.error("Subscription check failed:", err);
     } finally {
