@@ -13,6 +13,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
 import EmailCollectionModal from "@/components/EmailCollectionModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { FloatingElements } from "@/components/FloatingElements";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const IndexPage = () => {
   const { user } = useAuth();
@@ -124,53 +126,56 @@ const IndexPage = () => {
   const fileSizeMB = audioFile ? audioFile.size / (1024 * 1024) : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
-      <div className="max-w-4xl mx-auto w-full">
+    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8 flex flex-col relative">
+      <FloatingElements />
+
+      <div className="max-w-4xl mx-auto w-full relative z-10">
         <div className="flex justify-between items-center mb-8">
           <div>
             <img src="/images/logo.png" alt="raxti.app logo" className="h-24" />
           </div>
-          <nav className="flex items-center space-x-6">
-            <Link href="/how-it-works" className="text-steno-blue hover:text-steno-darkBlue transition-colors">
+          <nav className="flex items-center space-x-4 sm:space-x-6">
+            <Link href="/how-it-works" className="text-primary hover:text-primary/80 transition-colors text-sm">
               How It Works
             </Link>
-            <Link href="/pro" className="text-steno-blue hover:text-steno-darkBlue transition-colors font-medium">
+            <Link href="/pro" className="text-primary hover:text-primary/80 transition-colors font-medium text-sm">
               PRO
             </Link>
             {user && hasActiveSubscription && (
-              <Link href="/pro-dashboard" className="text-steno-blue hover:text-steno-darkBlue transition-colors font-medium">
+              <Link href="/pro-dashboard" className="text-primary hover:text-primary/80 transition-colors font-medium text-sm">
                 Pro Dashboard
               </Link>
             )}
             {user ? (
-              <Link href="/profile" className="text-steno-blue hover:text-steno-darkBlue transition-colors">
+              <Link href="/profile" className="text-primary hover:text-primary/80 transition-colors text-sm">
                 Profile
               </Link>
             ) : (
-              <Link href="/auth" className="text-steno-blue hover:text-steno-darkBlue transition-colors">
+              <Link href="/auth" className="text-primary hover:text-primary/80 transition-colors text-sm">
                 Sign In
               </Link>
             )}
+            <ThemeToggle />
           </nav>
         </div>
 
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
+          <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
             <span className="block">raxti.app</span>
-            <span className="block text-steno-blue text-2xl sm:text-3xl mt-3">
+            <span className="block text-primary text-2xl sm:text-3xl mt-3">
               Turn your audio into actionable insights
             </span>
           </h1>
-          <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
+          <p className="mt-3 max-w-md mx-auto text-base text-muted-foreground sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
             Upload audio, get transcripts, summaries, and action items instantly.
           </p>
         </div>
 
-        <Alert className="mb-4 bg-amber-50 border-amber-200">
-          <InfoIcon className="h-4 w-4 text-amber-500" />
-          <AlertDescription className="ml-2 text-amber-700">
+        <Alert className="mb-4 border-amber-500/30 bg-amber-500/10">
+          <InfoIcon className="h-4 w-4 text-amber-400" />
+          <AlertDescription className="ml-2 text-amber-300 dark:text-amber-300">
             Free version supports file uploads only up to 25MB. For larger uploads,{" "}
-            <Link href="/pro" className="font-semibold underline hover:text-amber-800">
+            <Link href="/pro" className="font-semibold underline hover:opacity-80">
               get PRO version!
             </Link>
           </AlertDescription>
@@ -193,7 +198,7 @@ const IndexPage = () => {
                       selectedOutputLanguage={outputLanguage}
                     />
                     {error && (
-                      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded" role="alert">
+                      <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded" role="alert">
                         {error}
                       </div>
                     )}
