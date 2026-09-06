@@ -263,19 +263,19 @@ const ProcessingStatus = ({ isProcessing, fileSizeMB, isPro, onRetry, customMess
   };
 
   return (
-    <Card className="shadow-lg border-0 bg-gradient-to-br from-blue-50 to-indigo-50">
+    <Card className="shadow-lg border-0 bg-card">
       <CardContent className="p-8">
         <div className="space-y-6">
           {/* Header */}
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <Loader className="h-6 w-6 animate-spin text-blue-600" />
+              <Loader className="h-6 w-6 animate-spin text-primary" />
               <h3 className="text-xl font-semibold text-foreground">
                 {customMessage ? "Processing YouTube Video" : "Processing Your Audio"}
               </h3>
             </div>
             {fileSizeMB > 25 && isPro && !customMessage && (
-              <p className="text-sm text-blue-600 font-medium">
+              <p className="text-sm text-primary font-medium">
                 Large file detected - Using PRO chunking feature
               </p>
             )}
@@ -292,15 +292,15 @@ const ProcessingStatus = ({ isProcessing, fileSizeMB, isPro, onRetry, customMess
           </div>
 
           {/* Processing Status */}
-          <div className="bg-background/70 rounded-lg p-4 border border-blue-100">
+          <div className="bg-background/70 rounded-lg p-4 border border-border">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium text-foreground">Processing Time</span>
               <span className="text-sm text-muted-foreground">{formatTime(processingTime)}</span>
             </div>
             
             {isStalled && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800 mb-2">
+              <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-sm text-yellow-400 mb-2">
                   Processing seems to have stalled. This can happen with very large files or when OpenAI's servers are busy.
                 </p>
                 {onRetry && (
@@ -320,7 +320,7 @@ const ProcessingStatus = ({ isProcessing, fileSizeMB, isPro, onRetry, customMess
 
           {/* Recent Logs */}
           {edgeLogs.length > 0 && (
-            <div className="bg-background/70 rounded-lg p-4 border border-blue-100">
+            <div className="bg-background/70 rounded-lg p-4 border border-border">
               <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
                 Processing Log
               </p>
@@ -338,7 +338,7 @@ const ProcessingStatus = ({ isProcessing, fileSizeMB, isPro, onRetry, customMess
           )}
 
           {/* Haiku Display */}
-          <div className="bg-background/70 rounded-lg p-6 text-center border border-blue-100">
+          <div className="bg-background/70 rounded-lg p-6 text-center border border-border">
             <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
               While you wait, enjoy this haiku
             </p>
@@ -354,7 +354,7 @@ const ProcessingStatus = ({ isProcessing, fileSizeMB, isPro, onRetry, customMess
           {/* File Info */}
           <div className="text-center text-sm text-muted-foreground">
             {!customMessage && <p>File size: {fileSizeMB.toFixed(2)} MB</p>}
-            {isPro && <p className="text-blue-600 font-medium">PRO Processing Active</p>}
+            {isPro && <p className="text-primary font-medium">PRO Processing Active</p>}
           </div>
         </div>
       </CardContent>
