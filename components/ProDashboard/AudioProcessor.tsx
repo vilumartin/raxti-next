@@ -106,33 +106,32 @@ const AudioProcessor = ({ user, results, setResults, error, setError }: AudioPro
           console.log("🎵 Step 1: Transcribing audio...");
           toast.info("Transcribing audio...");
 
-          const { data: { session } } = await supabase.auth.getSession();
-
-          const transcriptRes = await fetch('/api/process-audio', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
-            },
-            body: JSON.stringify({
+          const { data: transcriptData, error: transcriptError } = await supabase.functions.invoke('process-audio', {
+            body: {
               audioData: base64String,
               inputLanguage,
               outputLanguage,
               userId: user?.id,
               skipSummary: true,
-            }),
+            },
           });
-          const transcriptData = await transcriptRes.json();
 
-          if (!transcriptRes.ok || transcriptData?.error) {
+          if (transcriptError) {
+            console.error("Transcript error:", transcriptError);
             const fileSizeMB = (audioFile.size / (1024 * 1024)).toFixed(1);
             const fileExtension = audioFile.name.split('.').pop()?.toLowerCase();
-            let errorMessage = transcriptData?.error || "Failed to transcribe audio file";
-            if (!transcriptRes.ok && audioFile.size > 25 * 1024 * 1024 && fileExtension === 'm4a') {
-              errorMessage = `M4A file (${fileSizeMB}MB) cannot be chunked due to format limitations. Please convert to MP3/WAV.`;
+            let errorMessage = transcriptError.message || "Failed to transcribe audio file";
+            if (transcriptError.message?.includes("Edge Function returned a non-2xx status code")) {
+              if (audioFile.size > 25 * 1024 * 1024 && fileExtension === 'm4a') {
+                errorMessage = `M4A file (${fileSizeMB}MB) cannot be chunked due to format limitations. Please convert to MP3/WAV.`;
+              } else {
+                errorMessage = "Processing failed. Please try converting your file to MP3 or WAV format.";
+              }
             }
             throw new Error(errorMessage);
           }
+
+          if (transcriptData?.error) throw new Error(transcriptData.error);
           
           // Display transcript immediately
           console.log("✅ Transcript received, displaying results...");
@@ -152,17 +151,13 @@ const AudioProcessor = ({ user, results, setResults, error, setError }: AudioPro
           console.log("📝 Output language:", outputLanguage);
           
           try {
-            console.log("📡 Calling /api/generate-summary...");
-            const summaryRes = await fetch('/api/generate-summary', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ transcript: transcriptData.transcript, outputLanguage }),
+            console.log("📡 Invoking generate-summary function...");
+            const { data: summaryData, error: summaryError } = await supabase.functions.invoke('generate-summary', {
+              body: { transcript: transcriptData.transcript, outputLanguage },
             });
-            const summaryData = await summaryRes.json();
 
-            if (!summaryRes.ok || !summaryData) {
-              throw new Error(summaryData?.error || "No summary data received");
-            }
+            if (summaryError) throw summaryError;
+            if (!summaryData) throw new Error("No summary data received from function");
             
             // Update with complete results
             console.log("✅ Summary generated successfully");

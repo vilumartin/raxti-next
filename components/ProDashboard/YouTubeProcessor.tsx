@@ -70,19 +70,24 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
       
       console.log("🎥 Processing YouTube video:", videoUrl);
       
-      // Call our YouTube extractor API route
-      const { data: { session } } = await supabase.auth.getSession();
-      const ytRes = await fetch('/api/youtube-extractor', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify({ videoUrl: videoUrl.trim(), outputLanguage, userId: user?.id }),
+      const { data, error: functionError } = await supabase.functions.invoke('youtube-extractor', {
+        body: { videoUrl: videoUrl.trim(), outputLanguage, userId: user?.id },
       });
-      const data = await ytRes.json();
 
-      if (!ytRes.ok || data?.error) {
+      if (functionError) {
+        console.error("❌ Function error:", functionError);
+        let errorMessage = "An error occurred while processing the YouTube video.";
+        if (functionError.message?.includes("Failed to send a request")) {
+          errorMessage = "Unable to connect to the YouTube processing service. The video may have copyright restrictions, be private, or be unavailable in your region.";
+        } else if (functionError.message?.includes("Load failed")) {
+          errorMessage = "Failed to load the YouTube processing service. Please check your internet connection and try again.";
+        } else {
+          errorMessage = `Processing failed: ${functionError.message}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      if (data?.error) {
         console.error("❌ Processing error:", data.error);
         
         // Handle specific error messages from the edge function

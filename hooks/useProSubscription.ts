@@ -28,26 +28,9 @@ export const useProSubscription = (user: User | null) => {
       }
 
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data, error } = await supabase.functions.invoke('check-subscription');
 
-        if (sessionError || !session) {
-          toast.error("Session expired, please refresh the page");
-          setIsLoading(false);
-          return;
-        }
-
-        const res = await fetch('/api/check-subscription', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-          if (data?.error?.includes("User not authenticated")) {
-            toast.error("Please sign in again");
-            setIsLoading(false);
-            router.push('/auth');
-            return;
-          }
+        if (error) {
           toast.error("Failed to verify subscription status");
           setIsLoading(false);
           return;
@@ -63,10 +46,9 @@ export const useProSubscription = (user: User | null) => {
         }
 
         setHasActiveSubscription(true);
-      } catch (error) {
-        console.error("Unexpected error checking subscription:", error);
+      } catch (err) {
+        console.error("Unexpected error checking subscription:", err);
         toast.error("Failed to verify subscription status");
-        setIsLoading(false);
       } finally {
         setIsLoading(false);
       }

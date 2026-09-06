@@ -34,11 +34,7 @@ const IndexPage = () => {
     const checkSubscription = async () => {
       if (!user) { setHasActiveSubscription(false); return; }
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch("/api/check-subscription", {
-          headers: { Authorization: `Bearer ${session?.access_token}` },
-        });
-        const data = await res.json();
+        const { data } = await supabase.functions.invoke("check-subscription");
         setHasActiveSubscription(data?.subscribed || false);
       } catch (err) {
         console.error("Error checking subscription:", err);
@@ -87,22 +83,16 @@ const IndexPage = () => {
         try {
           if (!event.target?.result) throw new Error("Failed to read the audio file");
           const base64String = event.target.result as string;
-          const { data: { session } } = await supabase.auth.getSession();
-          const res = await fetch("/api/process-audio", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
-            },
-            body: JSON.stringify({
+          const { data, error: functionError } = await supabase.functions.invoke("process-audio", {
+            body: {
               audioData: base64String,
               inputLanguage,
               outputLanguage,
               userId: user?.id,
-            }),
+            },
           });
-          const data = await res.json();
-          if (!res.ok || data?.error) throw new Error(data?.error || "Processing failed");
+          if (functionError) throw new Error(functionError.message || "Processing failed");
+          if (data?.error) throw new Error(data.error);
           const processedResult = {
             transcript: data.transcript || "No transcript generated",
             summary: data.summary || "No summary generated",
