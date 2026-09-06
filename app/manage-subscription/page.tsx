@@ -152,7 +152,7 @@ export default function ManageSubscription() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
@@ -245,7 +245,7 @@ export default function ManageSubscription() {
                             : "Renews:"}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 ml-6">
+                      <p className="text-sm text-muted-foreground ml-6">
                         {formatDate(subscription.current_period_end)}
                       </p>
                     </div>
@@ -331,7 +331,7 @@ export default function ManageSubscription() {
               <h3 className="text-lg font-semibold mb-2">
                 No Active Subscription
               </h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-muted-foreground mb-6">
                 You don&apos;t have an active subscription to manage.
               </p>
               <div className="space-x-4">

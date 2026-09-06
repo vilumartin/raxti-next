@@ -123,17 +123,17 @@ const FileUpload = ({
       {!file ? (
         <div 
           className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center h-64 
-                     ${isDragging ? 'border-steno-blue bg-steno-blue/5' : 'border-gray-300'}`}
+                     ${isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          <CloudUpload className="h-12 w-12 text-gray-400 mb-3" />
+          <CloudUpload className="h-12 w-12 text-muted-foreground mb-3" />
           <div className="text-center">
-            <p className="text-lg text-gray-600 mb-1">
+            <p className="text-lg text-muted-foreground mb-1">
               Drag and drop your audio file here
             </p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Supported formats: mp3, mp4, mpeg, mpga, m4a, wav, or webm
             </p>
           </div>
@@ -166,7 +166,7 @@ const FileUpload = ({
           <AudioPreview file={file} />
           
           <div className="pt-2">
-            <div className="flex justify-between text-xs text-gray-500 mb-2">
+            <div className="flex justify-between text-xs text-muted-foreground mb-2">
               <span>{file.name}</span>
               <span>{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
             </div>
@@ -208,7 +208,7 @@ const FileUpload = ({
           <Button
             onClick={onProcess}
             disabled={isProcessing}
-            className="bg-steno-blue hover:bg-steno-darkBlue"
+            className="bg-primary hover:bg-primary/80"
           >
             {isProcessing ? (
               <>Processing...</>

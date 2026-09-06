@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { Logo } from "@/components/Logo";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -122,13 +123,9 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 py-12">
       <Link href="/" className="mb-6">
-        <img
-          src="/images/logo.png"
-          alt="raxti.app logo"
-          className="h-20"
-        />
+        <Logo variant="full" />
       </Link>
 
       <Card className="w-full max-w-md border-0 shadow-lg">

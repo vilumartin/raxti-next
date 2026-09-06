@@ -86,7 +86,7 @@ const AudioPreview = ({ file }: AudioPreviewProps) => {
           <div className="flex items-center space-x-4">
             <button
               onClick={handlePlayPause}
-              className="flex-shrink-0 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center text-steno-blue hover:bg-blue-50 transition-colors"
+              className="flex-shrink-0 w-10 h-10 rounded-full bg-background shadow-md flex items-center justify-center text-primary hover:bg-blue-50 transition-colors"
             >
               {isPlaying ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

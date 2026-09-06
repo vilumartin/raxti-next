@@ -349,11 +349,11 @@ const PromptProcessor = ({ transcript, onResults, userId, inputLanguage, outputL
                     {prompts.map((prompt) => (
                       <div
                         key={prompt.id}
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                       >
                         <div className="flex-1">
                           <h4 className="font-medium text-sm">{prompt.name}</h4>
-                          <p className="text-xs text-gray-600 mt-1">{prompt.description}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{prompt.description}</p>
                         </div>
                         <Button
                           size="sm"
@@ -375,7 +375,7 @@ const PromptProcessor = ({ transcript, onResults, userId, inputLanguage, outputL
 
         <div className="border-t pt-6">
           <label className="text-sm font-medium mb-2 block">✏️ Custom Prompt</label>
-          <p className="text-xs text-gray-600 mb-3">Write your own instruction and optionally add context.</p>
+          <p className="text-xs text-muted-foreground mb-3">Write your own instruction and optionally add context.</p>
           <Textarea
             placeholder="Enter your custom prompt for analyzing the transcript..."
             value={customPrompt}

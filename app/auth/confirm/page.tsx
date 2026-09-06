@@ -47,33 +47,33 @@ function ConfirmHandler() {
   }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center space-y-4 p-8">
         {status === "loading" && (
           <>
-            <div className="h-10 w-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-gray-600">Confirming your email...</p>
+            <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-muted-foreground">Confirming your email...</p>
           </>
         )}
         {status === "success" && (
           <>
-            <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="h-10 w-10 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+              <svg className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <p className="text-green-700 font-medium">{message}</p>
+            <p className="text-green-400 font-medium">{message}</p>
           </>
         )}
         {status === "error" && (
           <>
-            <div className="h-10 w-10 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="h-10 w-10 bg-destructive/20 rounded-full flex items-center justify-center mx-auto">
+              <svg className="h-6 w-6 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
-            <p className="text-red-700">{message}</p>
-            <p className="text-gray-500 text-sm">Redirecting to sign in...</p>
+            <p className="text-destructive">{message}</p>
+            <p className="text-muted-foreground text-sm">Redirecting to sign in...</p>
           </>
         )}
       </div>

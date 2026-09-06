@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -137,24 +139,23 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center">
-            <Link href="/" className="mr-4">
-              <img
-                src="/images/logo.png"
-                alt="raxti.app logo"
-                className="h-16"
-              />
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <Logo variant="compact" />
             </Link>
-            <h1 className="text-3xl font-bold">Your Account</h1>
+            <h1 className="text-2xl font-bold text-foreground">Your Account</h1>
           </div>
-          <Button variant="ghost" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Button variant="ghost" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         <Button variant="ghost" className="mb-4" asChild>
@@ -178,7 +179,7 @@ export default function Profile() {
                 <Button
                   asChild
                   size="lg"
-                  className="bg-white text-steno-blue hover:bg-gray-100 hover:text-steno-darkBlue font-semibold px-8 py-3 text-lg"
+                  className="bg-white/90 text-primary hover:bg-white font-semibold px-8 py-3 text-lg"
                 >
                   <Link href="/pro-dashboard">Go to Pro Dashboard</Link>
                 </Button>
@@ -204,9 +205,9 @@ export default function Profile() {
                   id="email"
                   value={email}
                   disabled
-                  className="bg-gray-50"
+                  className="bg-muted"
                 />
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Email cannot be changed
                 </p>
               </div>
@@ -224,7 +225,7 @@ export default function Profile() {
               <Button
                 onClick={updateProfile}
                 disabled={savingProfile || !fullName.trim()}
-                className="bg-steno-blue hover:bg-steno-darkBlue"
+                className="bg-primary hover:bg-primary/90"
               >
                 {savingProfile ? "Saving..." : "Save Changes"}
               </Button>
@@ -243,7 +244,7 @@ export default function Profile() {
             <CardContent className="space-y-4">
               {loading ? (
                 <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-8 w-8 text-steno-blue animate-spin" />
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
                 </div>
               ) : subscriptionError ? (
                 <div className="p-3 bg-red-50 border border-red-100 rounded-md">
@@ -303,7 +304,7 @@ export default function Profile() {
                   {subscription.current_period_end && (
                     <div className="space-y-2">
                       <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                        <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                         <p className="text-sm">
                           <span className="font-medium">
                             {subscription.cancel_at_period_end
@@ -316,7 +317,7 @@ export default function Profile() {
                     </div>
                   )}
 
-                  <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
+                  <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground">
                     <span>
                       Last checked:{" "}
                       {lastChecked ? format(lastChecked, "HH:mm:ss") : "Never"}
@@ -348,7 +349,7 @@ export default function Profile() {
                     </p>
                   </div>
 
-                  <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
+                  <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground">
                     <span>
                       Last checked:{" "}
                       {lastChecked ? format(lastChecked, "HH:mm:ss") : "Never"}
@@ -375,7 +376,7 @@ export default function Profile() {
               {subscription && subscription.status === "active" ? (
                 <Button
                   asChild
-                  className="w-full bg-steno-blue hover:bg-steno-darkBlue"
+                  className="w-full bg-primary hover:bg-primary/90"
                 >
                   <Link href="/manage-subscription">
                     Manage Subscription
@@ -384,7 +385,7 @@ export default function Profile() {
               ) : (
                 <Button
                   onClick={() => router.push("/subscribe")}
-                  className="w-full bg-steno-blue hover:bg-steno-darkBlue"
+                  className="w-full bg-primary hover:bg-primary/90"
                 >
                   Subscribe Now
                 </Button>

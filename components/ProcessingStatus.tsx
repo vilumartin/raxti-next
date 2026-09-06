@@ -270,7 +270,7 @@ const ProcessingStatus = ({ isProcessing, fileSizeMB, isPro, onRetry, customMess
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
               <Loader className="h-6 w-6 animate-spin text-blue-600" />
-              <h3 className="text-xl font-semibold text-gray-800">
+              <h3 className="text-xl font-semibold text-foreground">
                 {customMessage ? "Processing YouTube Video" : "Processing Your Audio"}
               </h3>
             </div>
@@ -283,19 +283,19 @@ const ProcessingStatus = ({ isProcessing, fileSizeMB, isPro, onRetry, customMess
 
           {/* Current Processing Step */}
           <div className="text-center">
-            <p className="text-lg font-medium text-gray-700 mb-2">
+            <p className="text-lg font-medium text-foreground mb-2">
               {getLatestLogMessage()}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Estimated time: {getEstimatedTime()}
             </p>
           </div>
 
           {/* Processing Status */}
-          <div className="bg-white/70 rounded-lg p-4 border border-blue-100">
+          <div className="bg-background/70 rounded-lg p-4 border border-blue-100">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">Processing Time</span>
-              <span className="text-sm text-gray-600">{formatTime(processingTime)}</span>
+              <span className="text-sm font-medium text-foreground">Processing Time</span>
+              <span className="text-sm text-muted-foreground">{formatTime(processingTime)}</span>
             </div>
             
             {isStalled && (
@@ -320,15 +320,15 @@ const ProcessingStatus = ({ isProcessing, fileSizeMB, isPro, onRetry, customMess
 
           {/* Recent Logs */}
           {edgeLogs.length > 0 && (
-            <div className="bg-white/70 rounded-lg p-4 border border-blue-100">
-              <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+            <div className="bg-background/70 rounded-lg p-4 border border-blue-100">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
                 Processing Log
               </p>
-              <div className="space-y-1 text-sm text-gray-600 max-h-32 overflow-y-auto">
+              <div className="space-y-1 text-sm text-muted-foreground max-h-32 overflow-y-auto">
                 {edgeLogs.slice(-5).map((log, index) => (
                   <div key={index} className="flex justify-between">
                     <span className="truncate">{log.event_message.replace(/[🎵📡✅❌🔄📊📋📍🚀📥📞]/g, '').trim()}</span>
-                    <span className="text-xs text-gray-400 ml-2">
+                    <span className="text-xs text-muted-foreground ml-2">
                       {new Date(log.timestamp).toLocaleTimeString()}
                     </span>
                   </div>
@@ -338,13 +338,13 @@ const ProcessingStatus = ({ isProcessing, fileSizeMB, isPro, onRetry, customMess
           )}
 
           {/* Haiku Display */}
-          <div className="bg-white/70 rounded-lg p-6 text-center border border-blue-100">
-            <p className="text-xs uppercase tracking-wide text-gray-500 mb-3">
+          <div className="bg-background/70 rounded-lg p-6 text-center border border-blue-100">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
               While you wait, enjoy this haiku
             </p>
             <div className="space-y-1">
               {haikus[currentHaiku].lines.map((line, index) => (
-                <p key={index} className="text-gray-700 italic">
+                <p key={index} className="text-foreground italic">
                   {line}
                 </p>
               ))}
@@ -352,7 +352,7 @@ const ProcessingStatus = ({ isProcessing, fileSizeMB, isPro, onRetry, customMess
           </div>
 
           {/* File Info */}
-          <div className="text-center text-sm text-gray-500">
+          <div className="text-center text-sm text-muted-foreground">
             {!customMessage && <p>File size: {fileSizeMB.toFixed(2)} MB</p>}
             {isPro && <p className="text-blue-600 font-medium">PRO Processing Active</p>}
           </div>

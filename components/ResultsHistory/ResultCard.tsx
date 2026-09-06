@@ -32,7 +32,7 @@ const ResultCard = ({ result, onDelete, onSelect }: ResultCardProps) => {
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
-        <div className="flex items-center gap-4 text-sm text-gray-500">
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
             {formatDistanceToNow(new Date(result.created_at), { addSuffix: true })}
@@ -49,12 +49,12 @@ const ResultCard = ({ result, onDelete, onSelect }: ResultCardProps) => {
       <CardContent className="space-y-3">
         <div>
           <h4 className="font-medium mb-1">Summary</h4>
-          <p className="text-sm text-gray-600 line-clamp-2">{result.summary}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2">{result.summary}</p>
         </div>
         {result.action_items && result.action_items.length > 0 && (
           <div>
             <h4 className="font-medium mb-1">Action Items ({result.action_items.length})</h4>
-            <p className="text-sm text-gray-600 line-clamp-1">
+            <p className="text-sm text-muted-foreground line-clamp-1">
               {result.action_items[0]}{result.action_items.length > 1 ? '...' : ''}
             </p>
           </div>

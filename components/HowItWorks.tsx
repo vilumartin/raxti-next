@@ -22,15 +22,15 @@ const HowItWorks = () => {
         
         <div className="flex flex-col items-start lg:col-span-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-            <Card className="border border-gray-200">
+            <Card className="border border-border">
               <CardContent className="p-6">
                 <div className="flex items-start space-x-4">
-                  <div className="bg-steno-blue/10 p-3 rounded-full">
-                    <FileAudio className="h-6 w-6 text-steno-blue" />
+                  <div className="bg-primary/10 p-3 rounded-full">
+                    <FileAudio className="h-6 w-6 text-primary" />
                   </div>
                   <div>
                     <h3 className="font-medium text-lg mb-2">Supported File Types</h3>
-                    <p className="text-gray-600">
+                    <p className="text-muted-foreground">
                       mp3, mp4, mpeg, mpga, m4a, wav, webm
                     </p>
                   </div>
@@ -38,15 +38,15 @@ const HowItWorks = () => {
               </CardContent>
             </Card>
             
-            <Card className="border border-gray-200">
+            <Card className="border border-border">
               <CardContent className="p-6">
                 <div className="flex items-start space-x-4">
-                  <div className="bg-steno-blue/10 p-3 rounded-full">
-                    <Languages className="h-6 w-6 text-steno-blue" />
+                  <div className="bg-primary/10 p-3 rounded-full">
+                    <Languages className="h-6 w-6 text-primary" />
                   </div>
                   <div>
                     <h3 className="font-medium text-lg mb-2">Supported Languages</h3>
-                    <p className="text-gray-600">
+                    <p className="text-muted-foreground">
                       English, Spanish, French, German, Italian, Portuguese, and many more
                     </p>
                   </div>

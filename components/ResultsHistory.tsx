@@ -26,7 +26,7 @@ const ResultsHistory = ({ onSelectResult }: ResultsHistoryProps) => {
   if (!user) {
     return (
       <div className="p-6 text-center">
-        <p className="text-gray-500">You need to be logged in to view results history.</p>
+        <p className="text-muted-foreground">You need to be logged in to view results history.</p>
       </div>
     );
   }

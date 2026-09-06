@@ -87,7 +87,7 @@ const ProDashboard = () => {
   if (!user) {
     console.log("⏳ No user - showing loading");
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12 px-4 flex items-center justify-center">
+      <div className="min-h-screen bg-background py-12 px-4 flex items-center justify-center">
         <div>Loading...</div>
       </div>
     );
@@ -97,7 +97,7 @@ const ProDashboard = () => {
   if (isLoading) {
     console.log("⏳ Checking subscription - showing loading");
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12 px-4 flex items-center justify-center">
+      <div className="min-h-screen bg-background py-12 px-4 flex items-center justify-center">
         <div className="text-center">
           <div className="mb-4">Checking subscription...</div>
           <Button
@@ -119,13 +119,13 @@ const ProDashboard = () => {
   if (!hasActiveSubscription) {
     console.log("❌ No active subscription - showing helpful message");
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12 px-4 flex items-center justify-center">
+      <div className="min-h-screen bg-background py-12 px-4 flex items-center justify-center">
         <Card className="max-w-md mx-auto">
           <CardContent className="p-6 text-center">
             <h2 className="text-xl font-semibold mb-4">
               Pro Subscription Required
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               You need an active Pro subscription to access this dashboard.
             </p>
             <div className="space-y-2">
@@ -158,7 +158,7 @@ const ProDashboard = () => {
   console.log("✅ All checks passed - rendering ProDashboard");
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
+    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
       <div className="max-w-4xl mx-auto w-full">
         <ProNavigation onSignOut={handleSignOut} />
         <ProHeader user={user} />

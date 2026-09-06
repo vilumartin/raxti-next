@@ -74,7 +74,7 @@ const Results = ({ results, onReset, userId, inputLanguage, outputLanguage, hasA
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Results</h2>
+        <h2 className="text-2xl font-bold text-foreground">Results</h2>
         <Button variant="outline" onClick={onReset}>Process another file</Button>
       </div>
       
@@ -89,8 +89,8 @@ const Results = ({ results, onReset, userId, inputLanguage, outputLanguage, hasA
         </TabsList>
         
         <TabsContent value="transcript" className="mt-6">
-          <Card className="p-4 bg-white border rounded-md shadow-sm">
-            <div className="max-h-96 overflow-y-auto whitespace-pre-wrap text-gray-700">
+          <Card className="p-4 bg-background border rounded-md shadow-sm">
+            <div className="max-h-96 overflow-y-auto whitespace-pre-wrap text-foreground">
               {results.transcript}
             </div>
             <div className="flex justify-end space-x-3 mt-4 border-t pt-4">
@@ -135,8 +135,8 @@ const Results = ({ results, onReset, userId, inputLanguage, outputLanguage, hasA
         </TabsContent>
         
         <TabsContent value="summary" className="mt-6">
-          <Card className="p-4 bg-white border rounded-md shadow-sm">
-            <div className="max-h-96 overflow-y-auto whitespace-pre-wrap text-gray-700">
+          <Card className="p-4 bg-background border rounded-md shadow-sm">
+            <div className="max-h-96 overflow-y-auto whitespace-pre-wrap text-foreground">
               {displaySummary}
             </div>
             <div className="flex justify-end space-x-3 mt-4 border-t pt-4">
@@ -157,7 +157,7 @@ const Results = ({ results, onReset, userId, inputLanguage, outputLanguage, hasA
         </TabsContent>
         
         <TabsContent value="actionItems" className="mt-6">
-          <Card className="p-4 bg-white border rounded-md shadow-sm">
+          <Card className="p-4 bg-background border rounded-md shadow-sm">
             <ActionItemsList items={displayActionItems} />
             <div className="flex justify-end space-x-3 mt-4 border-t pt-4">
               <Button 
@@ -179,9 +179,9 @@ const Results = ({ results, onReset, userId, inputLanguage, outputLanguage, hasA
           <TabsContent value="customPrompt" className="mt-6">
             {customResults ? (
               <div className="space-y-4">
-                <Card className="p-4 bg-white border rounded-md shadow-sm">
-                  <h3 className="font-semibold mb-3 text-gray-900">Custom Analysis</h3>
-                  <div className="max-h-96 overflow-y-auto whitespace-pre-wrap text-gray-700">
+                <Card className="p-4 bg-background border rounded-md shadow-sm">
+                  <h3 className="font-semibold mb-3 text-foreground">Custom Analysis</h3>
+                  <div className="max-h-96 overflow-y-auto whitespace-pre-wrap text-foreground">
                     {removeAsterisks(customResults.summary)}
                   </div>
                   <div className="flex justify-end space-x-3 mt-4 border-t pt-4">
@@ -201,8 +201,8 @@ const Results = ({ results, onReset, userId, inputLanguage, outputLanguage, hasA
                 </Card>
 
                 {customResults.actionItems && customResults.actionItems.length > 0 && (
-                  <Card className="p-4 bg-white border rounded-md shadow-sm">
-                    <h3 className="font-semibold mb-3 text-gray-900">Action Items</h3>
+                  <Card className="p-4 bg-background border rounded-md shadow-sm">
+                    <h3 className="font-semibold mb-3 text-foreground">Action Items</h3>
                     <ActionItemsList items={customResults.actionItems} />
                     <div className="flex justify-end space-x-3 mt-4 border-t pt-4">
                       <Button 
@@ -221,9 +221,9 @@ const Results = ({ results, onReset, userId, inputLanguage, outputLanguage, hasA
                 )}
               </div>
             ) : (
-              <Card className="p-8 text-center bg-gray-50 border-2 border-dashed">
-                <p className="text-gray-600 mb-4">No custom analysis generated yet.</p>
-                <p className="text-sm text-gray-500">Use the "Generate Custom Analysis" section in the Transcript tab to create content with specific prompts.</p>
+              <Card className="p-8 text-center bg-muted/50 border-2 border-dashed">
+                <p className="text-muted-foreground mb-4">No custom analysis generated yet.</p>
+                <p className="text-sm text-muted-foreground">Use the "Generate Custom Analysis" section in the Transcript tab to create content with specific prompts.</p>
               </Card>
             )}
           </TabsContent>

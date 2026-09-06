@@ -208,7 +208,7 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
                       onChange={(e) => setVideoUrl(e.target.value)}
                       className="w-full"
                     />
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Supports youtube.com/watch, youtu.be, and video ID formats
                     </p>
                   </div>
@@ -251,12 +251,12 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
         ) : (
           <div className="space-y-4">
             {results.videoTitle && (
-              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
                 <Video className="h-5 w-5 text-red-600" />
                 <div className="flex-1">
-                  <h4 className="font-medium text-gray-900">{results.videoTitle}</h4>
+                  <h4 className="font-medium text-foreground">{results.videoTitle}</h4>
                   {results.videoDuration && (
-                    <p className="text-sm text-gray-600">Duration: {results.videoDuration}</p>
+                    <p className="text-sm text-muted-foreground">Duration: {results.videoDuration}</p>
                   )}
                 </div>
                 <Button
