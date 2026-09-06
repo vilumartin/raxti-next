@@ -5,16 +5,44 @@ export const maxDuration = 300; // 5 minutes for large files
 
 // Helper: decode base64 data URL to buffer
 function decodeBase64Audio(audioData: string): { buffer: Buffer; mimeType: string; extension: string } {
-  const matches = audioData.match(/^data:([^;]+);base64,(.+)$/);
-  if (!matches) throw new Error("Invalid audio data format");
-  const mimeType = matches[1];
-  const base64 = matches[2];
+  // Handle both "data:mime;base64,..." and plain base64 strings
+  let mimeType = "audio/mpeg";
+  let base64 = audioData;
+
+  const dataUrlMatch = audioData.match(/^data:([^;]*);base64,([\s\S]+)$/);
+  if (dataUrlMatch) {
+    mimeType = dataUrlMatch[1] || "audio/mpeg";
+    base64 = dataUrlMatch[2];
+  } else if (!audioData.startsWith("data:")) {
+    // Assume raw base64 string — treat as mp3
+    base64 = audioData;
+  } else {
+    throw new Error("Invalid audio data format");
+  }
+
   const buffer = Buffer.from(base64, "base64");
+  if (buffer.length === 0) throw new Error("Audio data is empty");
+
+  // Map MIME type to extension — M4A can arrive as audio/x-m4a, audio/mp4,
+  // video/mp4 or audio/aac depending on the browser
   let extension = "mp3";
-  if (mimeType.includes("wav") || mimeType.includes("wave")) extension = "wav";
-  else if (mimeType.includes("webm")) extension = "webm";
-  else if (mimeType.includes("mp4") || mimeType.includes("m4a")) extension = "m4a";
-  else if (mimeType.includes("mpeg") || mimeType.includes("mp3")) extension = "mp3";
+  const mime = mimeType.toLowerCase();
+  if (mime.includes("wav") || mime.includes("wave")) extension = "wav";
+  else if (mime.includes("webm")) extension = "webm";
+  else if (mime.includes("ogg")) extension = "ogg";
+  else if (mime.includes("flac")) extension = "flac";
+  else if (
+    mime.includes("m4a") ||
+    mime.includes("mp4") ||
+    mime.includes("aac") ||
+    mime.includes("x-m4a")
+  ) {
+    extension = "m4a";
+    // Whisper accepts m4a files but needs a recognised MIME type
+    if (!mime.includes("audio/")) mimeType = "audio/mp4";
+  } else if (mime.includes("mpeg") || mime.includes("mp3")) extension = "mp3";
+  // Fallback: keep mp3 extension which Whisper always accepts
+
   return { buffer, mimeType, extension };
 }
 
@@ -26,18 +54,35 @@ async function transcribeBuffer(
   language: string,
   openAIApiKey: string,
 ): Promise<{ transcript: string; segments: any[] }> {
-  const formData = new FormData();
-  const blob = new Blob([new Uint8Array(buffer)], { type: mimeType });
-  formData.append("file", blob, `audio.${extension}`);
-  formData.append("model", "whisper-1");
-  if (language && language !== "auto") formData.append("language", language);
-  formData.append("response_format", "verbose_json");
+  // Whisper accepts: mp3, mp4, mpeg, mpga, m4a, wav, webm
+  // For M4A/AAC we use audio/mp4 MIME and m4a extension
+  const whisperMime = mimeType || "audio/mpeg";
+  const whisperExt = extension || "mp3";
 
-  const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+  const buildFormData = (mime: string, ext: string) => {
+    const fd = new FormData();
+    fd.append("file", new Blob([new Uint8Array(buffer)], { type: mime }), `audio.${ext}`);
+    fd.append("model", "whisper-1");
+    if (language && language !== "auto") fd.append("language", language);
+    fd.append("response_format", "verbose_json");
+    return fd;
+  };
+
+  let res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
     headers: { Authorization: `Bearer ${openAIApiKey}` },
-    body: formData,
+    body: buildFormData(whisperMime, whisperExt),
   });
+
+  // If M4A upload fails, retry with mp3 extension/mime as Whisper fallback
+  if (!res.ok && (extension === "m4a")) {
+    console.warn("M4A upload failed, retrying as mp3...");
+    res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${openAIApiKey}` },
+      body: buildFormData("audio/mpeg", "mp3"),
+    });
+  }
 
   if (!res.ok) {
     const err = await res.text();

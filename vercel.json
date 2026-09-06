@@ -1,0 +1,15 @@
+{
+  "functions": {
+    "app/api/process-audio/route.ts": {
+      "maxDuration": 300,
+      "memory": 3008
+    },
+    "app/api/youtube-extractor/route.ts": {
+      "maxDuration": 300,
+      "memory": 3008
+    },
+    "app/api/generate-summary/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
