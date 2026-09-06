@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { User, ChevronLeft, Loader2, AlertCircle } from "lucide-react";
 import {
   Dialog,
@@ -144,20 +146,18 @@ export default function Subscribe() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center">
-            <Link href="/" className="mr-4">
-              <img
-                src="/images/logo.png"
-                alt="raxti.app logo"
-                className="h-16"
-              />
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <Logo variant="compact" />
             </Link>
-            <h1 className="text-3xl font-bold">Subscribe to Raxti Pro</h1>
+            <h1 className="text-2xl font-bold text-foreground">Subscribe to Raxti Pro</h1>
           </div>
-          {user && (
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {user && (
             <Button variant="outline" asChild>
               <Link href="/profile">
                 <User className="h-4 w-4 mr-2" />
@@ -165,6 +165,7 @@ export default function Subscribe() {
               </Link>
             </Button>
           )}
+          </div>
         </div>
 
         <Button variant="ghost" className="mb-4" asChild>

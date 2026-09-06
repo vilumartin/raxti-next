@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { FloatingElements } from "@/components/FloatingElements";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Logo } from "@/components/Logo";
 
 const IndexPage = () => {
   const { user } = useAuth();
@@ -119,9 +120,9 @@ const IndexPage = () => {
 
       <div className="max-w-4xl mx-auto w-full relative z-10">
         <div className="flex justify-between items-center mb-8">
-          <div>
-            <img src="/images/logo.png" alt="raxti.app logo" className="h-24" />
-          </div>
+          <Link href="/">
+            <Logo variant="compact" />
+          </Link>
           <nav className="flex items-center space-x-4 sm:space-x-6">
             <Link href="/how-it-works" className="text-primary hover:text-primary/80 transition-colors text-sm">
               How It Works

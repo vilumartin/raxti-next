@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -114,14 +115,10 @@ export default function PaymentSuccess() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-md mx-auto">
-        <Link href="/">
-          <img
-            src="/images/logo.png"
-            alt="raxti.app logo"
-            className="h-16 mx-auto mb-6"
-          />
+        <Link href="/" className="flex justify-center mb-6">
+          <Logo variant="compact" />
         </Link>
 
         <Card className="border-0 shadow-lg">

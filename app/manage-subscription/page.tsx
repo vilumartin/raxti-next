@@ -27,6 +27,8 @@ import {
   X,
 } from "lucide-react";
 import { format } from "date-fns";
+import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -156,16 +158,13 @@ export default function ManageSubscription() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center">
-            <Link href="/" className="mr-4">
-              <img
-                src="/images/logo.png"
-                alt="raxti.app logo"
-                className="h-16"
-              />
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <Logo variant="compact" />
             </Link>
-            <h1 className="text-3xl font-bold">Manage Subscription</h1>
+            <h1 className="text-2xl font-bold text-foreground">Manage Subscription</h1>
           </div>
+          <ThemeToggle />
         </div>
 
         <Button variant="ghost" className="mb-6" asChild>
