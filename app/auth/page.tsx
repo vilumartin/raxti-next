@@ -29,7 +29,7 @@ export default function Auth() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      router.push("/profile");
+      router.push("/");
     }
   }, [user, router]);
 
@@ -111,8 +111,8 @@ export default function Auth() {
           toast.error(error.message);
         }
       } else {
-        toast.success("Signin successful!");
-        router.push("/profile");
+        toast.success("Signed in!");
+        router.push("/");
       }
     } catch (error: any) {
       toast.error(error.message || "An unexpected error occurred");

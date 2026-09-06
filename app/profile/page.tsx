@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -32,6 +33,7 @@ import { format } from "date-fns";
 
 export default function Profile() {
   const { user, signOut } = useAuth();
+  const { isSubscribed, isLoading: subLoading, refresh: refreshSubscription } = useSubscription();
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -40,9 +42,7 @@ export default function Profile() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [refreshingSubscription, setRefreshingSubscription] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
-  const [subscriptionError, setSubscriptionError] = useState<string | null>(
-    null
-  );
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -52,30 +52,12 @@ export default function Profile() {
     } else {
       router.push("/auth");
     }
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSubscription = async () => {
     try {
       setLoading(true);
       setSubscriptionError(null);
-
-      console.log("Fetching subscription for user:", user?.email);
-
-      // First, ensure we have a valid session
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session) {
-        console.error("Session error:", sessionError);
-        setSubscriptionError(
-          "Authentication required. Please sign in again."
-        );
-        return;
-      }
-
-      console.log("Valid session found, checking subscription via Edge Function");
 
       const { data: stripeData, error: subError } = await supabase.functions.invoke("check-subscription");
 
@@ -129,11 +111,9 @@ export default function Profile() {
   const refreshSubscriptionStatus = async () => {
     try {
       setRefreshingSubscription(true);
-      // Re-fetch the subscription data
+      await refreshSubscription();
       await fetchSubscription();
-      if (!subscriptionError) {
-        toast.success("Subscription status refreshed");
-      }
+      toast.success("Subscription status refreshed");
     } catch (error) {
       console.error("Error refreshing subscription status:", error);
       toast.error("Failed to refresh subscription status");

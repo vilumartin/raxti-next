@@ -19,7 +19,7 @@ function ConfirmHandler() {
       const tokenHash = searchParams.get("token_hash");
       const type = searchParams.get("type") as any;
       // Where to redirect after success
-      const next = searchParams.get("next") || "/profile";
+      const next = searchParams.get("next") || "/";
 
       try {
         if (code) {

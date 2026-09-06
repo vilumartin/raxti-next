@@ -13,11 +13,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
 import EmailCollectionModal from "@/components/EmailCollectionModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { FloatingElements } from "@/components/FloatingElements";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const IndexPage = () => {
   const { user } = useAuth();
+  const { isSubscribed: hasActiveSubscription } = useSubscription();
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<{
@@ -30,20 +32,6 @@ const IndexPage = () => {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [inputLanguage, setInputLanguage] = useState<string>("en");
   const [outputLanguage, setOutputLanguage] = useState<string>("en");
-  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
-
-  useEffect(() => {
-    const checkSubscription = async () => {
-      if (!user) { setHasActiveSubscription(false); return; }
-      try {
-        const { data } = await supabase.functions.invoke("check-subscription");
-        setHasActiveSubscription(data?.subscribed || false);
-      } catch (err) {
-        console.error("Error checking subscription:", err);
-      }
-    };
-    checkSubscription();
-  }, [user]);
 
   const saveResultToHistory = async (result: any, fileName: string, fileSize: number) => {
     if (!user) return;

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -40,6 +41,7 @@ import {
 
 export default function ManageSubscription() {
   const { user } = useAuth();
+  const { refresh: refreshSubscription } = useSubscription();
   const router = useRouter();
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -53,31 +55,12 @@ export default function ManageSubscription() {
     } else {
       router.push("/auth");
     }
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSubscription = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      console.log("Fetching subscription for user:", user?.email);
-
-      // First, ensure we have a valid session
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session) {
-        console.error("Session error:", sessionError);
-        setError("Authentication required. Please sign in again.");
-        setTimeout(() => {
-          router.push("/auth");
-        }, 2000);
-        return;
-      }
-
-      console.log("Valid session found, checking subscription via Edge Function");
 
       const { data, error: subError } = await supabase.functions.invoke("check-subscription");
 
@@ -148,10 +131,9 @@ export default function ManageSubscription() {
   const refreshSubscriptionStatus = async () => {
     try {
       setRefreshing(true);
+      await refreshSubscription();
       await fetchSubscription();
-      if (!error) {
-        toast.success("Subscription status refreshed");
-      }
+      toast.success("Subscription status refreshed");
     } catch (err) {
       console.error("Error refreshing subscription status:", err);
       toast.error("Failed to refresh subscription status");
