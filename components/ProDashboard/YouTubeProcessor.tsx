@@ -151,13 +151,7 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
     } catch (err) {
       console.error("❌ Error processing YouTube video:", err);
       const msg = err instanceof Error ? err.message : "An unknown error occurred";
-      const friendly =
-        msg.includes("copyright") || msg.includes("CONVERSION_ERROR") || msg.includes("protected")
-          ? "Unable to process this video — it may be protected by copyright or region restrictions. Please try a different video."
-          : msg.includes("timed out") || msg.includes("timeout")
-          ? "Processing timed out. Please try a shorter video or try again later."
-          : msg;
-      setError(friendly);
+      setError(msg);
       toast.error("Error processing YouTube video");
     } finally {
       setIsProcessing(false);
