@@ -75,16 +75,20 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
       });
 
       if (functionError) {
-        console.error("❌ Function error:", functionError);
-        let errorMessage = "An error occurred while processing the YouTube video.";
-        if (functionError.message?.includes("Failed to send a request")) {
-          errorMessage = "Unable to connect to the YouTube processing service. The video may have copyright restrictions, be private, or be unavailable in your region.";
-        } else if (functionError.message?.includes("Load failed")) {
-          errorMessage = "Failed to load the YouTube processing service. Please check your internet connection and try again.";
-        } else {
-          errorMessage = `Processing failed: ${functionError.message}`;
-        }
-        throw new Error(errorMessage);
+        // Extract the real error message from the Edge Function response body
+        let detailedMessage = functionError.message;
+        try {
+          const ctx = (functionError as any).context;
+          if (ctx instanceof Response) {
+            const body = await ctx.json().catch(() => ctx.text());
+            detailedMessage = (typeof body === 'object' ? body?.error || body?.message : body) || detailedMessage;
+          } else if (typeof ctx === 'object' && ctx !== null) {
+            detailedMessage = ctx?.error || ctx?.message || detailedMessage;
+          }
+        } catch { /* keep original message */ }
+
+        console.error("❌ Function error:", functionError.message, "| detail:", detailedMessage);
+        throw new Error(detailedMessage || "An error occurred while processing the YouTube video.");
       }
 
       if (data?.error) {
