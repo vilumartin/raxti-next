@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           action_items: Json | null
           created_at: string
+          duration_seconds: number | null
           file_name: string
           file_size: number | null
           id: string
@@ -32,6 +33,7 @@ export type Database = {
         Insert: {
           action_items?: Json | null
           created_at?: string
+          duration_seconds?: number | null
           file_name: string
           file_size?: number | null
           id?: string
@@ -46,6 +48,7 @@ export type Database = {
         Update: {
           action_items?: Json | null
           created_at?: string
+          duration_seconds?: number | null
           file_name?: string
           file_size?: number | null
           id?: string

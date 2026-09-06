@@ -1,17 +1,15 @@
 "use client";
 
-
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import FileUpload from '@/components/FileUpload';
 import Results from '@/components/Results';
 import ProcessingStatus from '@/components/ProcessingStatus';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { InfoIcon, AlertTriangle, ExternalLink } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { User } from '@supabase/supabase-js';
-import { Button } from '@/components/ui/button';
+import { chunkAudioFile } from '@/lib/audioChunker';
 
 interface AudioResult {
   id?: string;
@@ -34,18 +32,32 @@ interface AudioProcessorProps {
   setError: (error: string | null) => void;
 }
 
+/** Files above this size use the Web Audio chunking path. */
+const CHUNK_THRESHOLD_MB = 25;
+
 const AudioProcessor = ({ user, results, setResults, error, setError }: AudioProcessorProps) => {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [inputLanguage, setInputLanguage] = useState<string>("en");
   const [outputLanguage, setOutputLanguage] = useState<string>("en");
 
-  // Save processed results to history
-  const saveResultToHistory = async (result: any, fileName: string, fileSize: number) => {
+  // Chunked-processing progress UI
+  const [chunkStage, setChunkStage] = useState<string>("");
+  const [chunkProgress, setChunkProgress] = useState<{ current: number; total: number } | null>(null);
+
+  // Guard against concurrent invocations (e.g. retry while processing)
+  const processingRef = useRef(false);
+
+  // ── Save result to history ────────────────────────────────────────────────
+  const saveResultToHistory = async (
+    result: AudioResult,
+    fileName: string,
+    fileSize: number,
+    durationSec?: number
+  ) => {
     try {
-      console.log("Attempting to save result to history for user:", user.id);
-      
-      const { error } = await supabase
+      // Insert core fields first — always safe regardless of migrations
+      const { data: inserted, error: dbErr } = await supabase
         .from('audio_results')
         .insert({
           user_id: user.id,
@@ -56,187 +68,233 @@ const AudioProcessor = ({ user, results, setResults, error, setError }: AudioPro
           action_items: result.actionItems,
           segments: result.segments,
           input_language: inputLanguage,
-          output_language: outputLanguage
-        });
+          output_language: outputLanguage,
+        })
+        .select('id')
+        .single();
 
-      if (error) {
-        console.error('Error saving result to history:', error);
-      } else {
-        console.log('Successfully saved result to history');
+      if (dbErr) {
+        console.error('Error saving result to history:', dbErr);
+        return;
       }
-    } catch (error) {
-      console.error('Error saving to history:', error);
+
+      // Patch in duration if we have it and the column exists (migration may not have run yet)
+      if (durationSec !== undefined && inserted?.id) {
+        await supabase
+          .from('audio_results')
+          .update({ duration_seconds: Math.round(durationSec) })
+          .eq('id', inserted.id)
+          .then(({ error }) => {
+            if (error) console.warn('duration_seconds column missing — run migration 20250601_add_duration_seconds.sql');
+          });
+      }
+    } catch (err) {
+      console.error('Error saving to history:', err);
     }
   };
 
-  const handleFileSelected = async (file: File) => {
+  // ── File / language handlers ──────────────────────────────────────────────
+  const handleFileSelected = (file: File) => {
     setAudioFile(file);
     setResults(null);
     setError(null);
   };
+  const handleInputLanguageChange = (v: string) => setInputLanguage(v);
+  const handleOutputLanguageChange = (v: string) => setOutputLanguage(v);
 
-  const handleInputLanguageChange = (value: string) => {
-    setInputLanguage(value);
+  // ── Shared summary generation ─────────────────────────────────────────────
+  const generateSummary = async (transcript: string) => {
+    const { data, error: err } = await supabase.functions.invoke('generate-summary', {
+      body: { transcript, outputLanguage },
+    });
+    if (err) throw err;
+    return {
+      summary: data?.summary || "No summary generated",
+      actionItems: data?.actionItems || [],
+    };
   };
-  
-  const handleOutputLanguageChange = (value: string) => {
-    setOutputLanguage(value);
-  };
 
-  const processAudio = async () => {
-    if (!audioFile) return;
+  // ── Path A: small file — send the whole file directly ────────────────────
+  const processSmallAudio = async () => {
+    const file = audioFile!;
 
-    // Early format check: M4A files > 25 MB cannot be chunked (container format limitation)
-    const fileExt = audioFile.name.split('.').pop()?.toLowerCase();
-    const isM4a = fileExt === 'm4a' || audioFile.type === 'audio/mp4' || audioFile.type === 'audio/x-m4a';
-    const fileSizeMBEarly = audioFile.size / (1024 * 1024);
-    if (isM4a && fileSizeMBEarly > 25) {
-      setError(`M4A_FORMAT_LIMIT:${fileSizeMBEarly.toFixed(1)}`);
-      return;
-    }
-
-    try {
-      setIsProcessing(true);
-      setError(null);
-      
-      const fileSizeMB = audioFile.size / (1024 * 1024);
-      console.log("Processing audio file:", audioFile.name, "size:", fileSizeMB.toFixed(2), "MB");
-      
+    return new Promise<void>((resolve, reject) => {
       const reader = new FileReader();
-      
-      reader.onload = async (event) => {
+
+      reader.onload = async (evt) => {
         try {
-          if (!event.target?.result) {
-            throw new Error("Failed to read the audio file");
-          }
-          
-          const base64String = event.target.result as string;
-          
-          // Step 1: Get transcript only (fast)
-          console.log("🎵 Step 1: Transcribing audio...");
-          toast.info("Transcribing audio...");
+          if (!evt.target?.result) throw new Error("Failed to read the audio file");
 
-          const { data: transcriptData, error: transcriptError } = await supabase.functions.invoke('process-audio', {
-            body: {
-              audioData: base64String,
-              inputLanguage,
-              outputLanguage,
-              userId: user?.id,
-              skipSummary: true,
-            },
+          const base64 = evt.target.result as string;
+          toast.info("Transcribing audio…");
+
+          const { data: td, error: te } = await supabase.functions.invoke('process-audio', {
+            body: { audioData: base64, inputLanguage, outputLanguage, userId: user.id, skipSummary: true },
           });
+          if (te || td?.error) throw new Error(td?.error || te?.message || "Transcription failed");
 
-          if (transcriptError) {
-            console.error("Transcript error:", transcriptError);
-            const fileSizeMB = (audioFile.size / (1024 * 1024)).toFixed(1);
-            const fileExtension = audioFile.name.split('.').pop()?.toLowerCase();
-            let errorMessage = transcriptError.message || "Failed to transcribe audio file";
-            if (transcriptError.message?.includes("Edge Function returned a non-2xx status code")) {
-              if (audioFile.size > 25 * 1024 * 1024 && fileExtension === 'm4a') {
-                errorMessage = `M4A file (${fileSizeMB}MB) cannot be chunked due to format limitations. Please convert to MP3/WAV.`;
-              } else {
-                errorMessage = "Processing failed. Please try converting your file to MP3 or WAV format.";
-              }
-            }
-            throw new Error(errorMessage);
-          }
-
-          if (transcriptData?.error) throw new Error(transcriptData.error);
-          
-          // Display transcript immediately
-          console.log("✅ Transcript received, displaying results...");
-          const partialResult = {
-            transcript: transcriptData.transcript || "No transcript generated",
-            summary: "Generating summary...",
+          const partialResult: AudioResult = {
+            transcript: td.transcript || "No transcript generated",
+            summary: "Generating summary…",
             actionItems: [],
-            segments: transcriptData.segments || [],
+            segments: td.segments || [],
           };
-          
           setResults(partialResult);
-          toast.success("Transcript ready! Generating summary...");
-          
-          // Step 2: Generate summary in background
-          console.log("📝 Step 2: Generating summary and action items...");
-          console.log("📝 Transcript length:", transcriptData.transcript?.length);
-          console.log("📝 Output language:", outputLanguage);
-          
-          try {
-            console.log("📡 Invoking generate-summary function...");
-            const { data: summaryData, error: summaryError } = await supabase.functions.invoke('generate-summary', {
-              body: { transcript: transcriptData.transcript, outputLanguage },
-            });
+          toast.success("Transcript ready! Generating summary…");
 
-            if (summaryError) throw summaryError;
-            if (!summaryData) throw new Error("No summary data received from function");
-            
-            // Update with complete results
-            console.log("✅ Summary generated successfully");
-            console.log("📄 Summary length:", summaryData?.summary?.length);
-            console.log("📋 Action items count:", summaryData?.actionItems?.length);
-            
-            const completeResult = {
-              transcript: transcriptData.transcript,
-              summary: summaryData?.summary || "No summary generated",
-              actionItems: summaryData?.actionItems || [],
-              segments: transcriptData.segments || [],
-            };
-            
-            setResults(completeResult);
-            await saveResultToHistory(completeResult, audioFile.name, audioFile.size);
+          try {
+            const { summary, actionItems } = await generateSummary(td.transcript);
+            const full: AudioResult = { ...partialResult, summary, actionItems };
+            setResults(full);
+            await saveResultToHistory(full, file.name, file.size);
             toast.success("Summary ready!");
-            
-          } catch (summaryError) {
-            console.error("❌ Summary generation failed:", summaryError);
-            console.error("❌ Full error object:", summaryError);
-            
-            // Keep the transcript, just show error for summary
-            const resultWithError = {
-              ...partialResult,
-              summary: "Failed to generate summary. Please try again.",
-              actionItems: []
-            };
-            setResults(resultWithError);
+          } catch {
+            const partial: AudioResult = { ...partialResult, summary: "Failed to generate summary.", actionItems: [] };
+            setResults(partial);
             toast.error("Failed to generate summary");
-            await saveResultToHistory(resultWithError, audioFile.name, audioFile.size);
+            await saveResultToHistory(partial, file.name, file.size);
           }
-          
-        } catch (err) {
-          console.error(err);
-          setError(err instanceof Error ? err.message : "An unknown error occurred during processing");
-          toast.error("Error processing audio");
-        } finally {
-          setIsProcessing(false);
+
+          resolve();
+        } catch (err: any) {
+          reject(err);
         }
       };
-      
-      reader.onerror = () => {
-        setError("Failed to read the audio file");
-        setIsProcessing(false);
-        toast.error("Failed to read the audio file");
-      };
-      
-      reader.readAsDataURL(audioFile);
-      
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
-      setIsProcessing(false);
+
+      reader.onerror = () => reject(new Error("Failed to read the audio file"));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // ── Path B: large file — Web Audio decode → WAV chunks → Whisper ─────────
+  const processLargeAudio = async () => {
+    const file = audioFile!;
+
+    // Step 1: decode + chunk in the browser
+    setChunkStage("Decoding audio…");
+    setChunkProgress(null);
+
+    let chunks: string[];
+    let totalDurationSec: number;
+
+    try {
+      ({ chunks, totalDurationSec } = await chunkAudioFile(file, (evt) => {
+        if (evt.stage === "decoding") {
+          setChunkStage("Decoding audio…");
+        } else if (evt.stage === "resampling") {
+          setChunkStage("Preparing audio…");
+        } else {
+          setChunkStage("Preparing audio…");
+          setChunkProgress({ current: evt.chunkIndex + 1, total: evt.totalChunks });
+        }
+      }));
+    } catch (err: any) {
+      throw new Error(`Could not decode audio: ${err.message}`);
+    }
+
+    // Step 2: transcribe each chunk sequentially
+    const transcripts: string[] = [];
+    const allSegments: any[] = [];
+    let timeOffset = 0;
+
+    for (let i = 0; i < chunks.length; i++) {
+      setChunkStage(`Transcribing part ${i + 1} of ${chunks.length}…`);
+      setChunkProgress({ current: i + 1, total: chunks.length });
+
+      const { data, error: err } = await supabase.functions.invoke('process-audio', {
+        body: {
+          audioData: chunks[i],
+          inputLanguage,
+          outputLanguage,
+          userId: user.id,
+          skipSummary: true,
+        },
+      });
+
+      if (err || data?.error) {
+        throw new Error(data?.error || err?.message || `Failed on chunk ${i + 1} of ${chunks.length}`);
+      }
+
+      if (data?.transcript?.trim()) {
+        transcripts.push(data.transcript.trim());
+      }
+
+      if (Array.isArray(data?.segments)) {
+        const adjusted = (data.segments as any[]).map((s) => ({
+          ...s,
+          start: s.start + timeOffset,
+          end: s.end + timeOffset,
+        }));
+        allSegments.push(...adjusted);
+        if (adjusted.length > 0) {
+          timeOffset = adjusted[adjusted.length - 1].end;
+        }
+      }
+    }
+
+    const transcript = transcripts.join(" ");
+
+    // Step 3: show transcript, then generate summary
+    setChunkStage("Generating summary…");
+    setChunkProgress(null);
+
+    const partialResult: AudioResult = {
+      transcript,
+      summary: "Generating summary…",
+      actionItems: [],
+      segments: allSegments,
+    };
+    setResults(partialResult);
+    toast.success("Transcript ready! Generating summary…");
+
+    try {
+      const { summary, actionItems } = await generateSummary(transcript);
+      const full: AudioResult = { ...partialResult, summary, actionItems };
+      setResults(full);
+      await saveResultToHistory(full, file.name, file.size, totalDurationSec);
+      toast.success("Summary ready!");
+    } catch {
+      const partial: AudioResult = { ...partialResult, summary: "Failed to generate summary.", actionItems: [] };
+      setResults(partial);
+      toast.error("Failed to generate summary");
+      await saveResultToHistory(partial, file.name, file.size, totalDurationSec);
+    }
+  };
+
+  // ── Main entry point ──────────────────────────────────────────────────────
+  const processAudio = async () => {
+    if (!audioFile || processingRef.current) return;
+
+    processingRef.current = true;
+    setIsProcessing(true);
+    setError(null);
+    setChunkStage("");
+    setChunkProgress(null);
+
+    try {
+      const sizeMB = audioFile.size / (1024 * 1024);
+      if (sizeMB > CHUNK_THRESHOLD_MB) {
+        await processLargeAudio();
+      } else {
+        await processSmallAudio();
+      }
+    } catch (err: any) {
+      setError(err.message || "An error occurred during processing");
       toast.error("Error processing audio");
+    } finally {
+      setIsProcessing(false);
+      setChunkStage("");
+      setChunkProgress(null);
+      processingRef.current = false;
     }
   };
 
   const handleRetry = () => {
-    console.log("🔄 Retrying audio processing from Pro Dashboard...");
-    if (audioFile) {
-      setIsProcessing(false);
-      setError(null);
-      setTimeout(() => {
-        processAudio();
-      }, 500);
-    }
+    if (!processingRef.current) processAudio();
   };
 
   const fileSizeMB = audioFile ? audioFile.size / (1024 * 1024) : 0;
+  const isLargeFile = fileSizeMB > CHUNK_THRESHOLD_MB;
 
   return (
     <Card className="shadow-lg border-0">
@@ -245,91 +303,88 @@ const AudioProcessor = ({ user, results, setResults, error, setError }: AudioPro
           <div className="space-y-8">
             {!isProcessing ? (
               <>
-                <FileUpload 
-                  onFileSelected={handleFileSelected} 
-                  onProcess={processAudio} 
-                  isProcessing={isProcessing} 
+                <FileUpload
+                  onFileSelected={handleFileSelected}
+                  onProcess={processAudio}
+                  isProcessing={isProcessing}
                   file={audioFile}
                   onInputLanguageChange={handleInputLanguageChange}
                   onOutputLanguageChange={handleOutputLanguageChange}
                   selectedInputLanguage={inputLanguage}
                   selectedOutputLanguage={outputLanguage}
                 />
-                
-                {error && (() => {
-                  // M4A large-file error: rich conversion prompt
-                  if (error.startsWith("M4A_FORMAT_LIMIT:")) {
-                    const sizeMB = error.split(":")[1];
-                    return (
-                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-5 space-y-3">
-                        <div className="flex items-start gap-3">
-                          <AlertTriangle className="h-5 w-5 text-amber-400 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="font-semibold text-amber-300">M4A files over 25 MB cannot be chunked</p>
-                            <p className="text-sm text-amber-200/80 mt-1">
-                              M4A is a container format — splitting raw bytes breaks the file structure, so every chunk fails.
-                              Your file is <strong>{sizeMB} MB</strong>. Please convert it to MP3 first (same quality, smaller size, fully chunkable).
-                            </p>
-                          </div>
-                        </div>
-                        <div className="pl-8 space-y-2">
-                          <p className="text-xs font-medium text-amber-300 uppercase tracking-wide">Free online converters</p>
-                          <div className="flex flex-wrap gap-2">
-                            {[
-                              { label: "CloudConvert", url: "https://cloudconvert.com/m4a-to-mp3" },
-                              { label: "Zamzar", url: "https://www.zamzar.com/convert/m4a-to-mp3/" },
-                              { label: "FreeConvert", url: "https://www.freeconvert.com/m4a-to-mp3" },
-                            ].map(({ label, url }) => (
-                              <a
-                                key={label}
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 transition-colors"
-                              >
-                                {label}
-                                <ExternalLink className="h-3 w-3" />
-                              </a>
-                            ))}
-                          </div>
-                          <p className="text-xs text-amber-200/60">
-                            Or use ffmpeg locally: <code className="bg-black/30 px-1 rounded">ffmpeg -i input.m4a output.mp3</code>
-                          </p>
-                        </div>
-                        <div className="pl-8">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-amber-400 hover:text-amber-300 px-0"
-                            onClick={() => setError(null)}
-                          >
-                            Dismiss
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  }
 
-                  // Generic error
-                  return (
-                    <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg" role="alert">
-                      <span className="block sm:inline text-sm">{error}</span>
-                    </div>
-                  );
-                })()}
+                {/* Large-file info banner */}
+                {audioFile && isLargeFile && !error && (
+                  <div className="flex items-start gap-3 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm">
+                    <AlertTriangle className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
+                    <p className="text-blue-300">
+                      Large file detected ({fileSizeMB.toFixed(1)} MB). It will be decoded in
+                      your browser and split into 5-minute chunks — no conversion needed.
+                      Processing may take a few minutes.
+                    </p>
+                  </div>
+                )}
+
+                {error && (
+                  <div
+                    className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg"
+                    role="alert"
+                  >
+                    <span className="block sm:inline text-sm">{error}</span>
+                  </div>
+                )}
               </>
             ) : (
-              <ProcessingStatus 
-                isProcessing={isProcessing}
-                fileSizeMB={fileSizeMB}
-                isPro={true}
-                onRetry={handleRetry}
-              />
+              /* ── Processing progress UI ── */
+              <div className="space-y-6">
+                {isLargeFile && chunkStage ? (
+                  /* Chunked-file progress */
+                  <div className="rounded-xl border border-border bg-card p-8 text-center space-y-6">
+                    <Loader2 className="h-10 w-10 text-primary animate-spin mx-auto" />
+
+                    <div>
+                      <p className="text-lg font-semibold text-foreground">{chunkStage}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {audioFile?.name} &middot; {fileSizeMB.toFixed(1)} MB
+                      </p>
+                    </div>
+
+                    {chunkProgress && (
+                      <div className="space-y-2 max-w-xs mx-auto">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Part {chunkProgress.current} of {chunkProgress.total}</span>
+                          <span>{Math.round((chunkProgress.current / chunkProgress.total) * 100)}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-primary rounded-full transition-all duration-300"
+                            style={{ width: `${(chunkProgress.current / chunkProgress.total) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-muted-foreground">
+                      Each 5-minute chunk is sent to Whisper separately.
+                      Don&apos;t close this tab.
+                    </p>
+                  </div>
+                ) : (
+                  /* Standard single-file processing status */
+                  <ProcessingStatus
+                    isProcessing={isProcessing}
+                    fileSizeMB={fileSizeMB}
+                    isPro={true}
+                    onRetry={handleRetry}
+                  />
+                )}
+              </div>
             )}
           </div>
         ) : (
-          <Results 
-            results={results} 
+          <Results
+            results={results}
             onReset={() => {
               setAudioFile(null);
               setResults(null);
