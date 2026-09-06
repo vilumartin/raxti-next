@@ -52,6 +52,22 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
     return patterns.some(pattern => pattern.test(url));
   };
 
+  const [processingStep, setProcessingStep] = useState<string>("");
+
+  const extractEdgeFunctionError = async (functionError: any): Promise<string> => {
+    let msg = functionError.message;
+    try {
+      const ctx = functionError.context;
+      if (ctx instanceof Response) {
+        const body = await ctx.json().catch(() => ctx.text());
+        msg = (typeof body === 'object' ? body?.error || body?.message : body) || msg;
+      } else if (typeof ctx === 'object' && ctx !== null) {
+        msg = ctx?.error || ctx?.message || msg;
+      }
+    } catch { /* keep original */ }
+    return msg;
+  };
+
   const processYouTubeVideo = async () => {
     if (!videoUrl.trim()) {
       setError('Please enter a YouTube video URL');
@@ -67,94 +83,85 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
       setIsProcessing(true);
       setError(null);
       setResults(null);
-      
-      console.log("🎥 Processing YouTube video:", videoUrl);
-      
-      const { data, error: functionError } = await supabase.functions.invoke('youtube-extractor', {
+
+      // ── Step 1: Get download URL from YouTube + RapidAPI ──────────────────
+      setProcessingStep("Fetching audio from YouTube (this can take 1-2 minutes)...");
+      console.log("🎥 Step 1: youtube-extractor →", videoUrl);
+
+      const { data: extractData, error: extractError } = await supabase.functions.invoke('youtube-extractor', {
         body: { videoUrl: videoUrl.trim(), outputLanguage, userId: user?.id },
       });
 
-      if (functionError) {
-        // Extract the real error message from the Edge Function response body
-        let detailedMessage = functionError.message;
-        try {
-          const ctx = (functionError as any).context;
-          if (ctx instanceof Response) {
-            const body = await ctx.json().catch(() => ctx.text());
-            detailedMessage = (typeof body === 'object' ? body?.error || body?.message : body) || detailedMessage;
-          } else if (typeof ctx === 'object' && ctx !== null) {
-            detailedMessage = ctx?.error || ctx?.message || detailedMessage;
-          }
-        } catch { /* keep original message */ }
-
-        console.error("❌ Function error:", functionError.message, "| detail:", detailedMessage);
-        throw new Error(detailedMessage || "An error occurred while processing the YouTube video.");
+      if (extractError) {
+        throw new Error(await extractEdgeFunctionError(extractError));
+      }
+      if (extractData?.error) {
+        throw new Error(extractData.error);
       }
 
-      if (data?.error) {
-        console.error("❌ Processing error:", data.error);
-        
-        // Handle specific error messages from the edge function
-        let errorMessage = data.error;
-        
-        if (data.error.includes("copyright restrictions") || 
-            data.error.includes("CONVERSION_ERROR") ||
-            data.error.includes("protected") ||
-            data.error.includes("unavailable for conversion")) {
-          errorMessage = "⚠️ Unable to process this video due to copyright restrictions or content protection.\n\n" +
-                        "This video may be:\n" +
-                        "• Protected by copyright\n" +
-                        "• Restricted in your region\n" +
-                        "• Set to private by the creator\n" +
-                        "• Blocked for audio extraction\n\n" +
-                        "Please try with a different video that allows audio extraction.";
-        } else if (data.error.includes("timed out") || data.error.includes("timeout")) {
-          errorMessage = "⏱️ Processing timed out - this video may be too long or the server is busy.\n\n" +
-                        "Please try:\n" +
-                        "• A shorter video\n" +
-                        "• Waiting a few minutes and trying again";
-        } else if (data.error.includes("API service") || data.error.includes("service temporarily unavailable")) {
-          errorMessage = "🔧 The YouTube processing service is temporarily unavailable.\n\n" +
-                        "Please try again in a few minutes.";
-        }
-        
-        throw new Error(errorMessage);
-      }
-      
-      console.log("✅ YouTube processing completed successfully:", {
-        transcriptLength: data.transcript?.length || 0,
-        summaryLength: data.summary?.length || 0,
-        actionItems: data.actionItems?.length || 0,
-        videoTitle: data.videoTitle
+      const { downloadUrl, videoTitle, videoDuration } = extractData;
+      console.log("✅ Step 1 complete — download URL:", downloadUrl);
+
+      // ── Step 2: Transcribe via process-audio using the download URL ────────
+      setProcessingStep(`Transcribing "${videoTitle || 'video'}"...`);
+      console.log("🎵 Step 2: process-audio with audioUrl");
+
+      const { data: audioData, error: audioError } = await supabase.functions.invoke('process-audio', {
+        body: {
+          audioUrl: downloadUrl,
+          inputLanguage: 'auto',
+          outputLanguage,
+          userId: user?.id,
+          isInternalCall: true,
+        },
       });
-      
+
+      if (audioError) {
+        throw new Error(await extractEdgeFunctionError(audioError));
+      }
+      if (audioData?.error) {
+        throw new Error(audioData.error);
+      }
+
+      console.log("✅ Step 2 complete:", {
+        transcriptLength: audioData.transcript?.length,
+        videoTitle,
+      });
+
       const processedResult = {
-        transcript: data.transcript || "No transcript generated",
-        summary: data.summary || "No summary generated",
-        actionItems: data.actionItems || [],
-        segments: data.segments || [],
-        videoTitle: data.videoTitle,
-        videoDuration: data.videoDuration
+        transcript: audioData.transcript || "No transcript generated",
+        summary: audioData.summary || "No summary generated",
+        actionItems: audioData.actionItems || [],
+        segments: audioData.segments || [],
+        videoTitle,
+        videoDuration,
       };
-      
+
       setResults(processedResult);
-      
-      // Save the YouTube transcription to results history
+
       await saveResult(
         processedResult,
-        data.videoTitle || 'YouTube Video',
-        0, // No file size for YouTube videos
-        'auto', // Input language is auto-detected
+        videoTitle || 'YouTube Video',
+        0,
+        'auto',
         outputLanguage
       );
-      
+
       toast.success("YouTube video processed successfully!");
     } catch (err) {
       console.error("❌ Error processing YouTube video:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred during processing");
+      const msg = err instanceof Error ? err.message : "An unknown error occurred";
+      const friendly =
+        msg.includes("copyright") || msg.includes("CONVERSION_ERROR") || msg.includes("protected")
+          ? "Unable to process this video — it may be protected by copyright or region restrictions. Please try a different video."
+          : msg.includes("timed out") || msg.includes("timeout")
+          ? "Processing timed out. Please try a shorter video or try again later."
+          : msg;
+      setError(friendly);
       toast.error("Error processing YouTube video");
     } finally {
       setIsProcessing(false);
+      setProcessingStep("");
     }
   };
 
@@ -243,7 +250,7 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
                 fileSizeMB={0}
                 isPro={true}
                 onRetry={handleRetry}
-                customMessage="Extracting audio from YouTube video and processing..."
+                customMessage={processingStep || "Extracting audio from YouTube video and processing..."}
               />
             )}
           </div>
