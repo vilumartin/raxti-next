@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" width="600" height="200">
+  <defs>
+    <style>
+      .word { font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 46px; letter-spacing: -0.5px; }
+    </style>
+  </defs>
+  <rect x="1" y="10" width="80" height="80" rx="21" fill="#141925" stroke="#262C3D" stroke-width="1.5"/>
+  <g transform="translate(10 19) scale(0.655)">
+    
+    <defs>
+      <linearGradient id="grad-nav-dark" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#60A5FA"/>
+        <stop offset="1" stop-color="#2563EB"/>
+      </linearGradient>
+    </defs>
+    <path d="M70 10 A18 26 0 0 1 70 50" stroke="#3B82F6" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.35"/>
+    <path d="M64 16 A12 18 0 0 1 64 44" stroke="#3B82F6" stroke-width="3.2" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <path d="M58 22 A6 10 0 0 1 58 38" stroke="#3B82F6" stroke-width="3.4" fill="none" stroke-linecap="round" opacity="0.9"/>
+    <path d="M22 46 A20 20 0 0 0 62 46" stroke="#F5F7FA" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <line x1="42" y1="66" x2="42" y2="80" stroke="#F5F7FA" stroke-width="5" stroke-linecap="round"/>
+    <line x1="28" y1="80" x2="56" y2="80" stroke="#F5F7FA" stroke-width="5" stroke-linecap="round"/>
+    <rect x="29" y="14" width="26" height="40" rx="13" fill="url(#grad-nav-dark)"/>
+  
+  </g>
+  <text x="96" y="66" class="word" fill="#F5F7FA">raxti</text>
+</svg>
