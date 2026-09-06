@@ -10,8 +10,14 @@
  * well within OpenAI Whisper's 25 MB per-request limit.
  */
 
-/** Seconds of audio per WAV chunk sent to Whisper. */
-const CHUNK_DURATION_SEC = 5 * 60; // 5 minutes
+/**
+ * Seconds of audio per WAV chunk sent to Whisper.
+ * 2 min @ 16 kHz mono = 3.84 MB WAV → ~5.1 MB base64
+ *   • Well under Supabase Edge Function body limits
+ *   • Whisper processes 2 min in ~10-30s, leaving plenty of headroom
+ *     inside the 150s Edge Function timeout
+ */
+const CHUNK_DURATION_SEC = 2 * 60; // 2 minutes
 
 /** Target sample rate for speech recognition — 16 kHz is ideal. */
 const TARGET_SAMPLE_RATE = 16_000;

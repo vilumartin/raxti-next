@@ -304,12 +304,31 @@ const AudioProcessor = ({
           outputLanguage,
           userId: user.id,
           skipSummary: true,
+          // Tells the edge function to skip per-chunk subscription checks —
+          // saves 3-8s per chunk and avoids hitting the 150s timeout.
+          skipSubscriptionCheck: true,
         },
       });
 
       if (err || data?.error) {
         if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
-        throw new Error(data?.error || err?.message || `Failed on chunk ${i + 1}/${totalChunks}`);
+        // Extract the real error — supabase.functions.invoke wraps the actual
+        // error body; try to surface it instead of the generic "non-2xx" message.
+        let msg = data?.error || data?.message;
+        if (!msg && err) {
+          try {
+            const ctx = (err as any).context;
+            if (ctx instanceof Response) {
+              const body = await ctx.json().catch(() => ctx.text());
+              msg = (typeof body === "object" ? body?.error || body?.message : body) || err.message;
+            } else {
+              msg = err.message;
+            }
+          } catch {
+            msg = err.message;
+          }
+        }
+        throw new Error(msg || `Failed on chunk ${i + 1}/${totalChunks}`);
       }
 
       // Track timing for ETA
