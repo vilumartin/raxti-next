@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Results from '@/components/Results';
-import ProcessingStatus from '@/components/ProcessingStatus';
+import ProcessingStatus, { ProcessingStep } from '@/components/ProcessingStatus';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InfoIcon, Video, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,7 +41,11 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
   const [videoUrl, setVideoUrl] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [outputLanguage, setOutputLanguage] = useState<string>("en");
+  const [steps, setSteps] = useState<ProcessingStep[]>([]);
   const { saveResult } = useResultsSaver({ user });
+
+  const patchStep = (id: string, patch: Partial<ProcessingStep>) =>
+    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
 
   const validateYouTubeUrl = (url: string): boolean => {
     const patterns = [
@@ -52,7 +56,7 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
     return patterns.some(pattern => pattern.test(url));
   };
 
-  const [processingStep, setProcessingStep] = useState<string>("");
+
 
   const extractEdgeFunctionError = async (functionError: any): Promise<string> => {
     let msg = functionError.message;
@@ -79,13 +83,19 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
       return;
     }
 
+    setSteps([
+      { id: "fetch",      label: "Fetch audio from YouTube", status: "pending" },
+      { id: "transcribe", label: "Transcribe with Whisper",  status: "pending" },
+      { id: "summarize",  label: "Generate summary",         status: "pending" },
+    ]);
+
     try {
       setIsProcessing(true);
       setError(null);
       setResults(null);
 
       // ── Step 1: Get download URL from YouTube + RapidAPI ──────────────────
-      setProcessingStep("Fetching audio from YouTube (this can take 1-2 minutes)...");
+      patchStep("fetch", { status: "active", startedAt: Date.now(), detail: "This can take 1-2 min…" });
       console.log("🎥 Step 1: youtube-extractor →", videoUrl);
 
       const { data: extractData, error: extractError } = await supabase.functions.invoke('youtube-extractor', {
@@ -100,10 +110,11 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
       }
 
       const { downloadUrl, videoTitle, videoDuration } = extractData;
+      patchStep("fetch", { status: "done", completedAt: Date.now(), detail: videoTitle || "Audio fetched" });
       console.log("✅ Step 1 complete — download URL:", downloadUrl);
 
       // ── Step 2: Transcribe via process-audio using the download URL ────────
-      setProcessingStep(`Transcribing "${videoTitle || 'video'}"...`);
+      patchStep("transcribe", { status: "active", startedAt: Date.now(), detail: videoTitle ? `"${videoTitle}"` : undefined });
       console.log("🎵 Step 2: process-audio with audioUrl");
 
       const { data: audioData, error: audioError } = await supabase.functions.invoke('process-audio', {
@@ -123,10 +134,9 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
         throw new Error(audioData.error);
       }
 
-      console.log("✅ Step 2 complete:", {
-        transcriptLength: audioData.transcript?.length,
-        videoTitle,
-      });
+      patchStep("transcribe", { status: "done", completedAt: Date.now() });
+      patchStep("summarize", { status: "active", startedAt: Date.now(), detail: "Building summary…" });
+      console.log("✅ Step 2 complete:", { transcriptLength: audioData.transcript?.length, videoTitle });
 
       const processedResult = {
         transcript: audioData.transcript || "No transcript generated",
@@ -137,6 +147,7 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
         videoDuration,
       };
 
+      patchStep("summarize", { status: "done", completedAt: Date.now() });
       setResults(processedResult);
 
       await saveResult(
@@ -155,7 +166,6 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
       toast.error("Error processing YouTube video");
     } finally {
       setIsProcessing(false);
-      setProcessingStep("");
     }
   };
 
@@ -239,12 +249,10 @@ const YouTubeProcessor = ({ user, results, setResults, error, setError }: YouTub
                 </div>
               </>
             ) : (
-              <ProcessingStatus 
-                isProcessing={isProcessing}
-                fileSizeMB={0}
-                isPro={true}
+              <ProcessingStatus
+                steps={steps}
+                fileName={videoUrl || "YouTube video"}
                 onRetry={handleRetry}
-                customMessage={processingStep || "Extracting audio from YouTube video and processing..."}
               />
             )}
           </div>

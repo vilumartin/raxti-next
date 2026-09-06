@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import FileUpload from "@/components/FileUpload";
 import Results from "@/components/Results";
-import ProcessingStatus from "@/components/ProcessingStatus";
+import ProcessingStatus, { ProcessingStep } from "@/components/ProcessingStatus";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,7 @@ const IndexPage = () => {
   const { isSubscribed: hasActiveSubscription } = useSubscription();
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [steps, setSteps] = useState<ProcessingStep[]>([]);
   const [results, setResults] = useState<{
     transcript: string;
     summary: string;
@@ -59,51 +60,71 @@ const IndexPage = () => {
     setError(null);
   };
 
+  const buildSteps = (): ProcessingStep[] => [
+    { id: "read",       label: "Read file",               status: "pending" },
+    { id: "transcribe", label: "Transcribe with Whisper", status: "pending" },
+    { id: "summarize",  label: "Generate summary",        status: "pending" },
+  ];
+
+  const patchStep = (id: string, patch: Partial<ProcessingStep>) =>
+    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+
   const processAudio = async () => {
     if (!audioFile) return;
     if (audioFile.size > 25 * 1024 * 1024) {
-      setError("File size exceeds 25MB limit for the free version. Please upgrade to PRO for larger files.");
+      setError("File size exceeds 25MB. Upgrade to PRO for larger files.");
       toast.error("File size exceeds free version limit");
       return;
     }
+    const initialSteps = buildSteps();
+    setSteps(initialSteps);
+    setIsProcessing(true);
+    setError(null);
+
     try {
-      setIsProcessing(true);
-      setError(null);
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          if (!event.target?.result) throw new Error("Failed to read the audio file");
-          const base64String = event.target.result as string;
-          const { data, error: functionError } = await supabase.functions.invoke("process-audio", {
-            body: {
-              audioData: base64String,
-              inputLanguage,
-              outputLanguage,
-              userId: user?.id,
-            },
-          });
-          if (functionError) throw new Error(functionError.message || "Processing failed");
-          if (data?.error) throw new Error(data.error);
-          const processedResult = {
-            transcript: data.transcript || "No transcript generated",
-            summary: data.summary || "No summary generated",
-            actionItems: data.actionItems || [],
-            segments: data.segments || [],
-          };
-          setResults(processedResult);
-          if (user) await saveResultToHistory(processedResult, audioFile.name, audioFile.size);
-          toast.success("Audio processed successfully!");
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "An unknown error occurred during processing");
-          toast.error("Error processing audio");
-        } finally {
-          setIsProcessing(false);
-        }
-      };
-      reader.onerror = () => { setError("Failed to read the audio file"); setIsProcessing(false); };
-      reader.readAsDataURL(audioFile);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
+      await new Promise<void>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          try {
+            if (!event.target?.result) throw new Error("Failed to read the audio file");
+            patchStep("read", { status: "done", completedAt: Date.now() });
+            patchStep("transcribe", { status: "active", startedAt: Date.now(), detail: "Sending to Whisper API…" });
+
+            const base64String = event.target.result as string;
+            const { data, error: functionError } = await supabase.functions.invoke("process-audio", {
+              body: { audioData: base64String, inputLanguage, outputLanguage, userId: user?.id },
+            });
+
+            if (functionError) throw new Error(functionError.message || "Processing failed");
+            if (data?.error) throw new Error(data.error);
+
+            patchStep("transcribe", { status: "done", completedAt: Date.now() });
+            patchStep("summarize", { status: "active", startedAt: Date.now(), detail: "Building summary…" });
+
+            const processedResult = {
+              transcript: data.transcript || "No transcript generated",
+              summary: data.summary || "No summary generated",
+              actionItems: data.actionItems || [],
+              segments: data.segments || [],
+            };
+
+            patchStep("summarize", { status: "done", completedAt: Date.now() });
+            setResults(processedResult);
+            if (user) await saveResultToHistory(processedResult, audioFile.name, audioFile.size);
+            toast.success("Audio processed successfully!");
+            resolve();
+          } catch (err: any) {
+            reject(err);
+          }
+        };
+        reader.onerror = () => reject(new Error("Failed to read the audio file"));
+        patchStep("read", { status: "active", startedAt: Date.now() });
+        reader.readAsDataURL(audioFile);
+      });
+    } catch (err: any) {
+      setError(err.message || "An unknown error occurred during processing");
+      toast.error("Error processing audio");
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -194,9 +215,9 @@ const IndexPage = () => {
                   </>
                 ) : (
                   <ProcessingStatus
-                    isProcessing={isProcessing}
+                    steps={steps}
+                    fileName={audioFile?.name}
                     fileSizeMB={fileSizeMB}
-                    isPro={hasActiveSubscription}
                     onRetry={handleRetry}
                   />
                 )}

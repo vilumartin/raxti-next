@@ -1,364 +1,248 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader, RefreshCw } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
+
+// ── Step types ────────────────────────────────────────────────────────────────
+
+export type StepStatus = "pending" | "active" | "done" | "error";
+
+export interface ProcessingStep {
+  id: string;
+  label: string;
+  status: StepStatus;
+  /** Secondary line shown under the label while active or on completion */
+  detail?: string;
+  /** 0-100 sub-progress (shown as a bar while active) */
+  progress?: number;
+  /** epoch ms when this step started (used for per-step elapsed display) */
+  startedAt?: number;
+  /** epoch ms when this step finished */
+  completedAt?: number;
+}
 
 interface ProcessingStatusProps {
-  isProcessing: boolean;
-  fileSizeMB: number;
-  isPro: boolean;
+  /** Ordered list of processing steps */
+  steps: ProcessingStep[];
+  /** Name of the file being processed */
+  fileName?: string;
+  /** File size in MB */
+  fileSizeMB?: number;
+  /** Seconds remaining (computed by parent from chunk timings); null = unknown */
+  estimatedRemainingSec?: number | null;
+  /** Whether the process appears stalled */
+  isStalled?: boolean;
+  /** Called when the user clicks Retry */
   onRetry?: () => void;
-  customMessage?: string;
 }
 
-interface EdgeLog {
-  event_message: string;
-  timestamp: number;
-  level: string;
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function fmtElapsed(ms: number): string {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return `${m}:${rem.toString().padStart(2, "0")}`;
 }
 
-const ProcessingStatus = ({ isProcessing, fileSizeMB, isPro, onRetry, customMessage }: ProcessingStatusProps) => {
-  const [currentHaiku, setCurrentHaiku] = useState(0);
-  const [processingTime, setProcessingTime] = useState(0);
-  const [edgeLogs, setEdgeLogs] = useState<EdgeLog[]>([]);
-  const [isStalled, setIsStalled] = useState(false);
-  const [lastLogTime, setLastLogTime] = useState<number | null>(null);
+function fmtRemaining(sec: number): string {
+  if (sec < 60) return `~${Math.ceil(sec)}s remaining`;
+  const m = Math.ceil(sec / 60);
+  return `~${m} min remaining`;
+}
 
-  const haikus = [
-    {
-      lines: [
-        "Audio whispers",
-        "Transform to written wisdom—",
-        "Raxti understands"
-      ]
-    },
-    {
-      lines: [
-        "Voice becomes clear text",
-        "AI listens, then translates—",
-        "Knowledge flows freely"
-      ]
-    },
-    {
-      lines: [
-        "Words dance in the cloud",
-        "Machine learning captures all—",
-        "Meaning crystallized"
-      ]
-    },
-    {
-      lines: [
-        "Silence broken soft",
-        "Raxti breathes life into sound—",
-        "Stories emerge bright"
-      ]
-    },
-    {
-      lines: [
-        "Digital ears hear",
-        "Every nuance, every pause—",
-        "Perfect transcription"
-      ]
-    },
-    {
-      lines: [
-        "Bytes flow like water",
-        "Through neural networks they dance—",
-        "Intelligence born"
-      ]
-    },
-    {
-      lines: [
-        "Patient algorithms",
-        "Weave magic from spoken words—",
-        "Time moves like honey"
-      ]
-    },
-    {
-      lines: [
-        "Coffee grows cold while",
-        "Servers process your audio—",
-        "Soon wisdom awaits"
-      ]
-    },
-    {
-      lines: [
-        "In silicon dreams",
-        "Your voice becomes eternal—",
-        "Digital memory"
-      ]
-    },
-    {
-      lines: [
-        "Electrons spinning",
-        "Decode the rhythm of speech—",
-        "Language understood"
-      ]
-    },
-    {
-      lines: [
-        "Time bends and stretches",
-        "While computers think deeply—",
-        "Patience bears sweet fruit"
-      ]
-    },
-    {
-      lines: [
-        "Code poetry flows",
-        "Transforming sound into text—",
-        "Art meets technology"
-      ]
-    }
-  ];
+// ── Step icon ─────────────────────────────────────────────────────────────────
 
-  // Fetch edge function logs
-  const fetchEdgeLogs = async () => {
-    try {
-      // This would need to be implemented as an edge function to fetch logs
-      // For now, we'll simulate based on common processing steps
-      const response = await fetch('/api/edge-logs', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-      });
-      
-      if (response.ok) {
-        const logs = await response.json();
-        setEdgeLogs(logs);
-        
-        if (logs.length > 0) {
-          setLastLogTime(Date.now());
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch edge logs:', error);
-    }
-  };
+function StepIcon({ status }: { status: StepStatus }) {
+  if (status === "done") {
+    return (
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/20 text-green-400">
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      </span>
+    );
+  }
+  if (status === "error") {
+    return (
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive/20 text-destructive">
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </span>
+    );
+  }
+  if (status === "active") {
+    return (
+      <span className="flex h-6 w-6 items-center justify-center">
+        {/* Pulsing ring */}
+        <span className="relative flex h-3 w-3">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
+          <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
+        </span>
+      </span>
+    );
+  }
+  // pending
+  return (
+    <span className="flex h-6 w-6 items-center justify-center">
+      <span className="h-2.5 w-2.5 rounded-full border-2 border-muted-foreground/40" />
+    </span>
+  );
+}
 
-  // Get current processing step based on file size and type
-  const getCurrentStep = () => {
-    if (customMessage) {
-      return customMessage;
-    }
-    
-    if (fileSizeMB > 25 && isPro) {
-      return `Processing large file (${fileSizeMB.toFixed(1)}MB) with PRO chunking...`;
-    } else if (fileSizeMB > 15) {
-      return `Processing substantial file (${fileSizeMB.toFixed(1)}MB)...`;
-    } else {
-      return `Processing audio file (${fileSizeMB.toFixed(1)}MB)...`;
-    }
-  };
+// ── Main component ────────────────────────────────────────────────────────────
 
-  // Get the latest meaningful log message
-  const getLatestLogMessage = () => {
-    if (edgeLogs.length === 0) {
-      return getCurrentStep();
-    }
+const ProcessingStatus = ({
+  steps,
+  fileName,
+  fileSizeMB,
+  estimatedRemainingSec,
+  isStalled,
+  onRetry,
+}: ProcessingStatusProps) => {
+  const [now, setNow] = useState(Date.now());
 
-    const latestLog = edgeLogs[edgeLogs.length - 1];
-    
-    // Clean up log messages for user display
-    let message = latestLog.event_message;
-    
-    if (message.includes('Sending chunk')) {
-      const chunkMatch = message.match(/chunk (\d+)/);
-      const sizeMatch = message.match(/size: (\d+) bytes/);
-      if (chunkMatch && sizeMatch) {
-        const sizeMB = (parseInt(sizeMatch[1]) / (1024 * 1024)).toFixed(1);
-        return `Processing chunk ${chunkMatch[1]} (${sizeMB}MB)...`;
-      }
-      return 'Processing audio chunks...';
-    }
-    
-    if (message.includes('Transcription completed')) {
-      return 'Transcription completed, generating summary...';
-    }
-    
-    if (message.includes('Summary and action items generated')) {
-      return 'Almost done, finalizing results...';
-    }
-    
-    if (message.includes('Starting transcription')) {
-      return 'Starting audio transcription...';
-    }
-    
-    if (message.includes('chunking')) {
-      return 'Preparing large file for processing...';
-    }
-    
-    // Clean up technical messages
-    message = message.replace(/[🎵📡✅❌🔄📊📋📍🚀📥📞]/g, '').trim();
-    message = message.replace(/^(Log|Info|Error):\s*/i, '');
-    
-    return message || getCurrentStep();
-  };
-
-  // Estimate processing time based on file size
-  const getEstimatedTime = () => {
-    if (customMessage) {
-      return "1-3 minutes";
-    }
-    if (fileSizeMB < 5) return "1-2 minutes";
-    if (fileSizeMB < 15) return "2-4 minutes";
-    if (fileSizeMB < 25) return "3-6 minutes";
-    return "5-10 minutes (large file)";
-  };
-
+  // Tick every second for live elapsed times
   useEffect(() => {
-    if (!isProcessing) {
-      setProcessingTime(0);
-      setEdgeLogs([]);
-      setIsStalled(false);
-      setLastLogTime(null);
-      return;
-    }
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
-    // Start timing
-    const startTime = Date.now();
-    const timeInterval = setInterval(() => {
-      setProcessingTime(Math.floor((Date.now() - startTime) / 1000));
-    }, 1000);
+  // Overall elapsed: from when the first step started to now
+  const firstStartedAt = steps.find((s) => s.startedAt)?.startedAt;
+  const lastCompletedAt = steps.filter((s) => s.completedAt).at(-1)?.completedAt;
+  const overallElapsedMs = firstStartedAt
+    ? (lastCompletedAt && steps.every((s) => s.status === "done")
+        ? lastCompletedAt
+        : now) - firstStartedAt
+    : 0;
 
-    // Fetch logs periodically
-    const logInterval = setInterval(fetchEdgeLogs, 3000);
-    
-    // Initial log fetch
-    fetchEdgeLogs();
-
-    // Check for stalled processing
-    const stallCheckInterval = setInterval(() => {
-      if (lastLogTime && Date.now() - lastLogTime > 120000) { // 2 minutes without logs
-        setIsStalled(true);
-      }
-    }, 30000);
-
-    return () => {
-      clearInterval(timeInterval);
-      clearInterval(logInterval);
-      clearInterval(stallCheckInterval);
-    };
-  }, [isProcessing, lastLogTime]);
-
-  useEffect(() => {
-    if (!isProcessing) return;
-
-    const haikuInterval = setInterval(() => {
-      setCurrentHaiku(prev => (prev + 1) % haikus.length);
-    }, 4000);
-
-    return () => clearInterval(haikuInterval);
-  }, [isProcessing, haikus.length]);
-
-  if (!isProcessing) return null;
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  const activeStep = steps.find((s) => s.status === "active");
 
   return (
-    <Card className="shadow-lg border-0 bg-card">
-      <CardContent className="p-8">
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Loader className="h-6 w-6 animate-spin text-primary" />
-              <h3 className="text-xl font-semibold text-foreground">
-                {customMessage ? "Processing YouTube Video" : "Processing Your Audio"}
-              </h3>
-            </div>
-            {fileSizeMB > 25 && isPro && !customMessage && (
-              <p className="text-sm text-primary font-medium">
-                Large file detected - Using PRO chunking feature
-              </p>
-            )}
-          </div>
+    <div className="rounded-xl border border-border bg-card p-6 space-y-6">
+      {/* Header */}
+      <div>
+        <p className="text-lg font-semibold text-foreground">Processing audio</p>
+        {(fileName || fileSizeMB) && (
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {fileName && <span className="font-medium">{fileName}</span>}
+            {fileName && fileSizeMB && <span className="mx-1.5 opacity-50">·</span>}
+            {fileSizeMB && <span>{fileSizeMB.toFixed(1)} MB</span>}
+          </p>
+        )}
+      </div>
 
-          {/* Current Processing Step */}
-          <div className="text-center">
-            <p className="text-lg font-medium text-foreground mb-2">
-              {getLatestLogMessage()}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Estimated time: {getEstimatedTime()}
-            </p>
-          </div>
+      {/* Step list */}
+      <ol className="space-y-3">
+        {steps.map((step, i) => {
+          const stepElapsedMs =
+            step.startedAt
+              ? (step.completedAt ?? (step.status === "active" ? now : step.startedAt)) -
+                step.startedAt
+              : 0;
 
-          {/* Processing Status */}
-          <div className="bg-background/70 rounded-lg p-4 border border-border">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-foreground">Processing Time</span>
-              <span className="text-sm text-muted-foreground">{formatTime(processingTime)}</span>
-            </div>
-            
-            {isStalled && (
-              <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                <p className="text-sm text-yellow-400 mb-2">
-                  Processing seems to have stalled. This can happen with very large files or when OpenAI's servers are busy.
-                </p>
-                {onRetry && (
-                  <Button 
-                    onClick={onRetry} 
-                    size="sm" 
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Retry Processing
-                  </Button>
+          return (
+            <li key={step.id} className="flex items-start gap-3">
+              {/* Connector + icon */}
+              <div className="flex flex-col items-center">
+                <StepIcon status={step.status} />
+                {i < steps.length - 1 && (
+                  <span
+                    className={`mt-1 w-px flex-1 rounded-full transition-colors ${
+                      step.status === "done" ? "bg-green-500/30" : "bg-border"
+                    }`}
+                    style={{ height: "20px" }}
+                  />
                 )}
               </div>
-            )}
-          </div>
 
-          {/* Recent Logs */}
-          {edgeLogs.length > 0 && (
-            <div className="bg-background/70 rounded-lg p-4 border border-border">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-                Processing Log
-              </p>
-              <div className="space-y-1 text-sm text-muted-foreground max-h-32 overflow-y-auto">
-                {edgeLogs.slice(-5).map((log, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span className="truncate">{log.event_message.replace(/[🎵📡✅❌🔄📊📋📍🚀📥📞]/g, '').trim()}</span>
-                    <span className="text-xs text-muted-foreground ml-2">
-                      {new Date(log.timestamp).toLocaleTimeString()}
+              {/* Content */}
+              <div className="flex-1 min-w-0 pb-1">
+                <div className="flex items-baseline justify-between gap-4">
+                  <span
+                    className={`text-sm font-medium ${
+                      step.status === "pending"
+                        ? "text-muted-foreground"
+                        : step.status === "done"
+                        ? "text-foreground"
+                        : step.status === "error"
+                        ? "text-destructive"
+                        : "text-foreground"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                  {step.status === "done" && stepElapsedMs > 0 && (
+                    <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                      {fmtElapsed(stepElapsedMs)}
                     </span>
+                  )}
+                  {step.status === "active" && stepElapsedMs > 0 && (
+                    <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                      {fmtElapsed(stepElapsedMs)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Sub-detail line */}
+                {step.detail && step.status !== "pending" && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{step.detail}</p>
+                )}
+
+                {/* Sub-progress bar (active step only) */}
+                {step.status === "active" && step.progress !== undefined && (
+                  <div className="mt-2 space-y-1">
+                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ width: `${step.progress}%` }}
+                      />
+                    </div>
+                    {estimatedRemainingSec != null && estimatedRemainingSec > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {fmtRemaining(estimatedRemainingSec)}
+                      </p>
+                    )}
                   </div>
-                ))}
+                )}
+
+                {/* Stall warning */}
+                {step.status === "active" && isStalled && (
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                    <p className="text-xs text-amber-400">
+                      Taking longer than expected — server may be busy.
+                    </p>
+                    {onRetry && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={onRetry}
+                        className="h-7 text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Retry
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            </li>
+          );
+        })}
+      </ol>
 
-          {/* Haiku Display */}
-          <div className="bg-background/70 rounded-lg p-6 text-center border border-border">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
-              While you wait, enjoy this haiku
-            </p>
-            <div className="space-y-1">
-              {haikus[currentHaiku].lines.map((line, index) => (
-                <p key={index} className="text-foreground italic">
-                  {line}
-                </p>
-              ))}
-            </div>
-          </div>
-
-          {/* File Info */}
-          <div className="text-center text-sm text-muted-foreground">
-            {!customMessage && <p>File size: {fileSizeMB.toFixed(2)} MB</p>}
-            {isPro && <p className="text-primary font-medium">PRO Processing Active</p>}
-          </div>
+      {/* Footer: overall elapsed */}
+      {overallElapsedMs > 0 && activeStep && (
+        <div className="pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+          <span>Elapsed: {fmtElapsed(overallElapsedMs)}</span>
+          <span>Don&apos;t close this tab</span>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 };
 
