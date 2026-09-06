@@ -7,10 +7,11 @@ import FileUpload from '@/components/FileUpload';
 import Results from '@/components/Results';
 import ProcessingStatus from '@/components/ProcessingStatus';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { InfoIcon } from 'lucide-react';
+import { InfoIcon, AlertTriangle, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { User } from '@supabase/supabase-js';
+import { Button } from '@/components/ui/button';
 
 interface AudioResult {
   id?: string;
@@ -84,6 +85,15 @@ const AudioProcessor = ({ user, results, setResults, error, setError }: AudioPro
 
   const processAudio = async () => {
     if (!audioFile) return;
+
+    // Early format check: M4A files > 25 MB cannot be chunked (container format limitation)
+    const fileExt = audioFile.name.split('.').pop()?.toLowerCase();
+    const isM4a = fileExt === 'm4a' || audioFile.type === 'audio/mp4' || audioFile.type === 'audio/x-m4a';
+    const fileSizeMBEarly = audioFile.size / (1024 * 1024);
+    if (isM4a && fileSizeMBEarly > 25) {
+      setError(`M4A_FORMAT_LIMIT:${fileSizeMBEarly.toFixed(1)}`);
+      return;
+    }
 
     try {
       setIsProcessing(true);
@@ -246,11 +256,67 @@ const AudioProcessor = ({ user, results, setResults, error, setError }: AudioPro
                   selectedOutputLanguage={outputLanguage}
                 />
                 
-                {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
-                    <span className="block sm:inline">{error}</span>
-                  </div>
-                )}
+                {error && (() => {
+                  // M4A large-file error: rich conversion prompt
+                  if (error.startsWith("M4A_FORMAT_LIMIT:")) {
+                    const sizeMB = error.split(":")[1];
+                    return (
+                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-5 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="h-5 w-5 text-amber-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-semibold text-amber-300">M4A files over 25 MB cannot be chunked</p>
+                            <p className="text-sm text-amber-200/80 mt-1">
+                              M4A is a container format — splitting raw bytes breaks the file structure, so every chunk fails.
+                              Your file is <strong>{sizeMB} MB</strong>. Please convert it to MP3 first (same quality, smaller size, fully chunkable).
+                            </p>
+                          </div>
+                        </div>
+                        <div className="pl-8 space-y-2">
+                          <p className="text-xs font-medium text-amber-300 uppercase tracking-wide">Free online converters</p>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              { label: "CloudConvert", url: "https://cloudconvert.com/m4a-to-mp3" },
+                              { label: "Zamzar", url: "https://www.zamzar.com/convert/m4a-to-mp3/" },
+                              { label: "FreeConvert", url: "https://www.freeconvert.com/m4a-to-mp3" },
+                            ].map(({ label, url }) => (
+                              <a
+                                key={label}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 transition-colors"
+                              >
+                                {label}
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            ))}
+                          </div>
+                          <p className="text-xs text-amber-200/60">
+                            Or use ffmpeg locally: <code className="bg-black/30 px-1 rounded">ffmpeg -i input.m4a output.mp3</code>
+                          </p>
+                        </div>
+                        <div className="pl-8">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-amber-400 hover:text-amber-300 px-0"
+                            onClick={() => setError(null)}
+                          >
+                            Dismiss
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Generic error
+                  return (
+                    <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg" role="alert">
+                      <span className="block sm:inline text-sm">{error}</span>
+                    </div>
+                  );
+                })()}
               </>
             ) : (
               <ProcessingStatus 
