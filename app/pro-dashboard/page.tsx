@@ -70,13 +70,8 @@ const ProDashboard = () => {
   const handleRefreshSubscription = async () => {
     setIsRefreshing(true);
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const res = await fetch("/api/check-subscription", {
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
-      if (!res.ok) {
+      const { error } = await supabase.functions.invoke("check-subscription");
+      if (error) {
         toast.error("Failed to refresh subscription status");
       } else {
         toast.success("Subscription status refreshed");

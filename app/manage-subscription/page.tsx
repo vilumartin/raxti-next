@@ -77,37 +77,14 @@ export default function ManageSubscription() {
         return;
       }
 
-      console.log("Valid session found, making subscription request");
+      console.log("Valid session found, checking subscription via Edge Function");
 
-      // Call the check-subscription API route
-      const res = await fetch("/api/check-subscription", {
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
-      const data = await res.json();
-      const stripeError = !res.ok
-        ? { message: data?.error || "Request failed" }
-        : null;
+      const { data, error: subError } = await supabase.functions.invoke("check-subscription");
 
-      if (stripeError) {
-        console.error(
-          "Error calling check-subscription function:",
-          stripeError
-        );
-
-        // Handle different types of errors
-        if (
-          stripeError.message?.includes("User not authenticated") ||
-          stripeError.message?.includes("invalid claim")
-        ) {
-          setError("Authentication expired. Please sign in again.");
-          setTimeout(() => {
-            router.push("/auth");
-          }, 2000);
-          return;
-        }
-
-        setError(`Failed to check subscription: ${stripeError.message}`);
-        throw new Error(stripeError.message);
+      if (subError) {
+        console.error("Error calling check-subscription function:", subError);
+        setError(`Failed to check subscription: ${subError.message}`);
+        throw new Error(subError.message);
       }
 
       console.log("Subscription data received:", data);
