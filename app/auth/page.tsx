@@ -43,7 +43,7 @@ export default function Auth() {
           data: {
             full_name: fullName,
           },
-          emailRedirectTo: `${window.location.origin}/auth`,
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
         },
       });
 
