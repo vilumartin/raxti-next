@@ -11,7 +11,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 
 interface NavbarProps {
   /** Override the "active" link highlight (defaults to current path detection) */
-  activePage?: "home" | "how-it-works" | "pro" | "pro-dashboard" | "profile";
+  activePage?: "home" | "how-it-works" | "faq" | "pro" | "pro-dashboard" | "profile";
 }
 
 export function Navbar({ activePage }: NavbarProps) {
@@ -45,6 +45,10 @@ export function Navbar({ activePage }: NavbarProps) {
         <nav className="flex items-center gap-3 sm:gap-5">
           <Link href="/how-it-works" className={linkCls("how-it-works")}>
             How it works
+          </Link>
+
+          <Link href="/faq" className={linkCls("faq")}>
+            FAQ
           </Link>
 
           {/* If subscribed: show Pro Dashboard. Otherwise: show Pricing. */}

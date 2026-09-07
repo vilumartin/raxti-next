@@ -19,6 +19,12 @@ const Footer = () => {
 
           <div className="flex items-center gap-4 text-sm">
             <Link
+              href="/faq"
+              className="text-primary hover:text-primary/80 transition-colors"
+            >
+              FAQ
+            </Link>
+            <Link
               href="/terms-of-use"
               className="text-primary hover:text-primary/80 transition-colors"
             >
