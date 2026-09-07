@@ -28,7 +28,7 @@ const ProHeader = ({ user }: ProHeaderProps) => {
         <InfoIcon className="h-4 w-4 text-green-400" />
         <AlertDescription className="ml-2 text-green-400 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <span>
-            You&apos;re using the PRO version! All audio formats supported, large files split automatically.
+            PRO — large files decoded in your browser (MP3, M4A, WAV, FLAC in all browsers; WebM/OGG in Chrome &amp; Firefox).
           </span>
           <div className="min-w-[200px]">
             <UsageCounter userId={user.id} />

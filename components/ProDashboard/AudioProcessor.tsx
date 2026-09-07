@@ -475,9 +475,10 @@ const AudioProcessor = ({
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <p className="text-blue-300">
-                      Large file ({fileSizeMB.toFixed(1)} MB) — will be decoded in
-                      your browser and split into 5-minute WAV chunks automatically.
-                      All formats supported. Processing will take a few minutes.
+                      Large file ({fileSizeMB.toFixed(1)} MB) — decoded in your
+                      browser and split into 2-minute chunks for transcription.
+                      MP3, M4A, WAV and FLAC work in all browsers. WebM and OGG
+                      require Chrome or Firefox (not Safari).
                     </p>
                   </div>
                 )}

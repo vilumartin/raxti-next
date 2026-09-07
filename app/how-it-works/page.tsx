@@ -110,8 +110,14 @@ const HowItWorksPage = () => {
                   <h3 className="font-medium text-lg mb-2 text-foreground">
                     Supported File Types
                   </h3>
-                  <p className="text-muted-foreground">
-                    mp3, mp4, mpeg, mpga, m4a, wav, webm
+                  <p className="text-muted-foreground font-medium">
+                    MP3 · M4A · WAV · FLAC · OGG · WebM
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Files up to 25 MB are sent directly to Whisper — all formats
+                    above work in every browser. Larger files are decoded in your
+                    browser first: MP3, M4A, WAV and FLAC work everywhere; WebM
+                    and OGG require Chrome or Firefox (not Safari).
                   </p>
                   <div className="mt-3 p-3 bg-muted/50 rounded-md border border-border">
                     <p className="text-sm font-medium text-foreground mb-2">

@@ -77,27 +77,29 @@ const FileUpload = ({
 
   const validateFile = (file: File): boolean => {
     const validTypes = [
-      'audio/mp3',
-      'audio/mpeg',
-      'audio/mpga',
-      'audio/x-m4a',
-      'audio/mp4',
-      'audio/wav',
-      'audio/wave',
-      'audio/x-wav',
-      'audio/vnd.wave',
-      'audio/webm'
+      // MP3 / MPEG
+      'audio/mp3', 'audio/mpeg', 'audio/mpga',
+      // M4A / MP4 audio
+      'audio/x-m4a', 'audio/mp4', 'audio/m4a',
+      // WAV
+      'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/vnd.wave',
+      // WebM
+      'audio/webm', 'video/webm',
+      // FLAC – Whisper + all major browsers support it
+      'audio/flac', 'audio/x-flac',
+      // OGG / Opus – Whisper supports both; Chrome & Firefox decode for large files
+      'audio/ogg', 'audio/opus', 'application/ogg',
     ];
-    
-    // Also check file extension as a fallback since MIME types can vary
+
+    // Extension fallback — OS/browser MIME types can be unreliable
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    const validExtensions = ['mp3', 'mp4', 'mpeg', 'mpga', 'm4a', 'wav', 'webm'];
-    
+    const validExtensions = ['mp3', 'mp4', 'mpeg', 'mpga', 'm4a', 'wav', 'webm', 'flac', 'ogg', 'opus'];
+
     const isMimeTypeValid = validTypes.includes(file.type);
     const isExtensionValid = fileExtension && validExtensions.includes(fileExtension);
-    
+
     if (!isMimeTypeValid && !isExtensionValid) {
-      setFormatError("Unsupported format. Please select an mp3, mp4, m4a, wav, or webm file.");
+      setFormatError("Unsupported format. Accepted: MP3, M4A, WAV, FLAC, OGG, WebM.");
       return false;
     }
     setFormatError(null);
@@ -149,7 +151,7 @@ const FileUpload = ({
               Drag and drop your audio file here
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Supported formats: mp3, mp4, mpeg, mpga, m4a, wav, or webm
+              MP3 · M4A · WAV · FLAC · OGG · WebM
             </p>
           </div>
           <Button
@@ -163,7 +165,7 @@ const FileUpload = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".mp3,.mp4,.mpeg,.mpga,.m4a,.wav,.webm"
+            accept=".mp3,.mp4,.mpeg,.mpga,.m4a,.wav,.webm,.flac,.ogg,.opus"
             className="hidden"
             onChange={handleFileChange}
           />
