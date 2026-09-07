@@ -126,6 +126,34 @@ export default function LatvianSpeechToTextPost() {
             or handles meetings across the languages Tilde supports.
           </p>
 
+          <h2>What an independent benchmark found</h2>
+          <p>
+            This isn't just a hunch. In March 2026, Latvian blogger Aivis
+            Brutans{" "}
+            <a
+              href="https://aivis.medium.com/audio-p%C4%81rveide-uz-tekstu-kur%C5%A1-r%C4%ABks-ir-prec%C4%ABz%C4%81ks-6951e5407ae5"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              ran an independent word-error-rate test
+            </a>{" "}
+            across a dozen transcription tools, using a real Latvian audio
+            recording and the JiWER library to score each result. ElevenLabs
+            and Soniox came out on top; Tilde Transcribe landed in the top
+            five at roughly 4.9% WER, despite having no way to define custom
+            terms; Hugo.lv scored around 10.8% WER. TurboScribe — built on
+            the same OpenAI Whisper model family Raxti runs on — was among
+            the weakest performers for Latvian specifically, and ChatGPT and
+            Claude.ai couldn't produce a usable transcript at all.
+          </p>
+          <p>
+            That test is a useful reality check on what Raxti is and isn't
+            good for: for Latvian audio specifically, a tool trained on
+            Baltic languages, or one of the stronger commercial speech APIs,
+            will likely out-transcribe a general-purpose Whisper-based tool
+            like ours.
+          </p>
+
           <h2>So where does Raxti fit?</h2>
           <p>
             We're not trying to out-transcribe either of these tools in
