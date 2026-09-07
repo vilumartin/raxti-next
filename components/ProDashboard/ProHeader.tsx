@@ -12,15 +12,15 @@ interface ProHeaderProps {
 const ProHeader = ({ user }: ProHeaderProps) => {
   return (
     <>
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
+      <div className="text-center mb-4 sm:mb-8">
+        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground md:text-5xl">
           <span className="block">Pro Dashboard</span>
-          <span className="block text-primary text-2xl sm:text-3xl mt-3">
+          <span className="block text-primary text-base sm:text-2xl mt-2">
             Advanced audio processing for professionals
           </span>
         </h1>
-        <p className="mt-3 max-w-md mx-auto text-base text-muted-foreground sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-          Welcome back, {user.user_metadata?.full_name || user.email}! Process unlimited audio files with Pro features.
+        <p className="mt-2 max-w-md mx-auto text-sm text-muted-foreground sm:text-base md:mt-4 md:max-w-3xl">
+          Welcome back, {user.user_metadata?.full_name || user.email}!
         </p>
       </div>
 

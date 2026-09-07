@@ -42,12 +42,13 @@ export function Navbar({ activePage }: NavbarProps) {
         </Link>
 
         {/* Links */}
-        <nav className="flex items-center gap-3 sm:gap-5">
-          <Link href="/how-it-works" className={linkCls("how-it-works")}>
+        <nav className="flex items-center gap-2 sm:gap-4">
+          {/* Secondary links hidden on very small screens */}
+          <Link href="/how-it-works" className={`hidden sm:inline ${linkCls("how-it-works")}`}>
             How it works
           </Link>
 
-          <Link href="/faq" className={linkCls("faq")}>
+          <Link href="/faq" className={`hidden sm:inline ${linkCls("faq")}`}>
             FAQ
           </Link>
 
@@ -56,7 +57,8 @@ export function Navbar({ activePage }: NavbarProps) {
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           ) : user && isSubscribed ? (
             <Link href="/pro-dashboard" className={`${linkCls("pro-dashboard")} text-primary font-semibold`}>
-              Pro Dashboard
+              <span className="hidden sm:inline">Pro Dashboard</span>
+              <span className="sm:hidden text-primary font-semibold text-sm">Pro</span>
             </Link>
           ) : (
             <Link href="/pro" className={`${linkCls("pro")} font-medium`}>

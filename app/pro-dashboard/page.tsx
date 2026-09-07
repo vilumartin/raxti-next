@@ -150,7 +150,7 @@ const ProDashboard = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar activePage="pro-dashboard" />
-      <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
         <ProHeader user={user} />
 
         <Tabs
@@ -159,17 +159,20 @@ const ProDashboard = () => {
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="upload" className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Audio Processing
+            <TabsTrigger value="upload" className="flex items-center gap-1 sm:gap-2">
+              <Upload className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Audio Processing</span>
+              <span className="sm:hidden">Audio</span>
             </TabsTrigger>
-            <TabsTrigger value="youtube" className="flex items-center gap-2">
-              <Video className="h-4 w-4" />
-              YouTube Transcription (Beta)
+            <TabsTrigger value="youtube" className="flex items-center gap-1 sm:gap-2">
+              <Video className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">YouTube (Beta)</span>
+              <span className="sm:hidden">YouTube</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
-              <History className="h-4 w-4" />
-              Results History
+            <TabsTrigger value="history" className="flex items-center gap-1 sm:gap-2">
+              <History className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Results History</span>
+              <span className="sm:hidden">History</span>
             </TabsTrigger>
           </TabsList>
 

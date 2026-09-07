@@ -139,25 +139,35 @@ const FileUpload = ({
     <div className="space-y-6">
       {!file ? (
         <div 
-          className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center h-64 
-                     ${isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'}`}
+          className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center min-h-52 cursor-pointer
+                     ${isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/60 hover:bg-muted/30'} transition-colors`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
         >
           <CloudUpload className="h-12 w-12 text-muted-foreground mb-3" />
           <div className="text-center">
-            <p className="text-lg text-muted-foreground mb-1">
+            {/* Desktop: drag-and-drop copy */}
+            <p className="hidden sm:block text-lg text-muted-foreground mb-1">
               Drag and drop your audio file here
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="hidden sm:block text-sm text-muted-foreground">
+              or click to select a file
+            </p>
+            {/* Mobile: tap-to-select copy */}
+            <p className="sm:hidden text-lg font-medium text-foreground mb-1">
+              Tap to select your audio file
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
               MP3 · M4A · WAV · FLAC · OGG · WebM
             </p>
           </div>
+          {/* Visible button on desktop only — whole zone is tappable on mobile */}
           <Button
             variant="outline"
-            className="mt-4"
-            onClick={() => fileInputRef.current?.click()}
+            className="mt-4 hidden sm:inline-flex"
+            onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
           >
             Select File
           </Button>

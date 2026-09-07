@@ -77,18 +77,24 @@ const Results = ({ results, onReset, userId, inputLanguage, outputLanguage, hasA
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-foreground">Results</h2>
-        <Button variant="outline" onClick={onReset}>Process another file</Button>
+      <div className="flex flex-wrap gap-2 justify-between items-center">
+        <h2 className="text-xl sm:text-2xl font-bold text-foreground">Results</h2>
+        <Button variant="outline" size="sm" onClick={onReset}>New file</Button>
       </div>
       
       <Tabs defaultValue="transcript" value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={`grid w-full ${hasActiveSubscription ? 'grid-cols-4' : 'grid-cols-3'}`}>
-          <TabsTrigger value="transcript">Transcript</TabsTrigger>
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="actionItems">Action Items</TabsTrigger>
+          <TabsTrigger value="transcript" className="text-xs sm:text-sm">Transcript</TabsTrigger>
+          <TabsTrigger value="summary" className="text-xs sm:text-sm">Summary</TabsTrigger>
+          <TabsTrigger value="actionItems" className="text-xs sm:text-sm">
+            <span className="hidden sm:inline">Action Items</span>
+            <span className="sm:hidden">Actions</span>
+          </TabsTrigger>
           {hasActiveSubscription && (
-            <TabsTrigger value="customPrompt">Custom Prompt</TabsTrigger>
+            <TabsTrigger value="customPrompt" className="text-xs sm:text-sm">
+              <span className="hidden sm:inline">Custom Prompt</span>
+              <span className="sm:hidden">Prompt</span>
+            </TabsTrigger>
           )}
         </TabsList>
         
@@ -97,7 +103,7 @@ const Results = ({ results, onReset, userId, inputLanguage, outputLanguage, hasA
             <div className="max-h-96 overflow-y-auto whitespace-pre-wrap text-foreground">
               {results.transcript}
             </div>
-            <div className="flex justify-end space-x-3 mt-4 border-t pt-4">
+            <div className="flex flex-wrap justify-end gap-2 mt-4 border-t pt-4">
               <Button 
                 variant="outline" 
                 size="sm"
@@ -143,7 +149,7 @@ const Results = ({ results, onReset, userId, inputLanguage, outputLanguage, hasA
             <div className="max-h-96 overflow-y-auto whitespace-pre-wrap text-foreground">
               {displaySummary}
             </div>
-            <div className="flex justify-end space-x-3 mt-4 border-t pt-4">
+            <div className="flex flex-wrap justify-end gap-2 mt-4 border-t pt-4">
               <Button 
                 variant="outline" 
                 size="sm"
@@ -163,7 +169,7 @@ const Results = ({ results, onReset, userId, inputLanguage, outputLanguage, hasA
         <TabsContent value="actionItems" className="mt-6">
           <Card className="p-4 bg-background border rounded-md shadow-sm">
             <ActionItemsList items={displayActionItems} />
-            <div className="flex justify-end space-x-3 mt-4 border-t pt-4">
+            <div className="flex flex-wrap justify-end gap-2 mt-4 border-t pt-4">
               <Button 
                 variant="outline" 
                 size="sm"
