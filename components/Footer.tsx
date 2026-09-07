@@ -25,6 +25,12 @@ const Footer = () => {
               FAQ
             </Link>
             <Link
+              href="/blog"
+              className="text-primary hover:text-primary/80 transition-colors"
+            >
+              Blog
+            </Link>
+            <Link
               href="/terms-of-use"
               className="text-primary hover:text-primary/80 transition-colors"
             >

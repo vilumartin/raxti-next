@@ -11,7 +11,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 
 interface NavbarProps {
   /** Override the "active" link highlight (defaults to current path detection) */
-  activePage?: "home" | "how-it-works" | "faq" | "pro" | "pro-dashboard" | "profile";
+  activePage?: "home" | "how-it-works" | "faq" | "blog" | "pro" | "pro-dashboard" | "profile";
 }
 
 export function Navbar({ activePage }: NavbarProps) {
@@ -50,6 +50,10 @@ export function Navbar({ activePage }: NavbarProps) {
 
           <Link href="/faq" className={`hidden sm:inline ${linkCls("faq")}`}>
             FAQ
+          </Link>
+
+          <Link href="/blog" className={`hidden sm:inline ${linkCls("blog")}`}>
+            Blog
           </Link>
 
           {/* If subscribed: show Pro Dashboard. Otherwise: show Pricing. */}
