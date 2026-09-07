@@ -25,7 +25,7 @@ const FileUpload = ({
   isProcessing,
   onInputLanguageChange,
   onOutputLanguageChange,
-  selectedInputLanguage = "en",
+  selectedInputLanguage = "auto",
   selectedOutputLanguage = "en"
 }: FileUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
